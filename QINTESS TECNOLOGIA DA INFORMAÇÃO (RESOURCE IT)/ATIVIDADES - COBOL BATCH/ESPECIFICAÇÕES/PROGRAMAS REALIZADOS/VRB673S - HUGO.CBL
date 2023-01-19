@@ -2,7 +2,7 @@
        IDENTIFICATION                            DIVISION.             
       *===============================================================*
        PROGRAM-ID.     VRB673S.                                        
-       AUTHOR.         GABRIEL CASANOVA SILVA.                         
+       AUTHOR.         HUGO DA SILVA SAMPAIO.                     
        INSTALLATION.   QINTESS PAULISTA.                               
                                                                        
       *OBJETIVO.       DESENVOLVER UM PROGRAMA PARA LER O ARQUIVO      
@@ -345,7 +345,7 @@
               DISPLAY 'ERRO NO: '                WK-CODIGO-AREA        
               DISPLAY 'STATUS:  '                WK-FS-ARQSAI          
               MOVE WK-FS-ARQSAI       TO         WK-AREA-STAT          
-              MOVE 'ERRO DA GRAVA«√O NO ARQUIVO DE SAIDA ARQSAI'       
+              MOVE 'ERRO DA GRAVA√á√ÉO NO ARQUIVO DE SAIDA ARQSAI'       
                                       TO         WK-AREA-MSG           
               CALL WK-ABENDA          USING      WK-AREA               
            END-IF.                                                     
@@ -367,7 +367,7 @@
               DISPLAY 'ERRO NO: '                WK-CODIGO-AREA        
               DISPLAY 'STATUS:  '                WK-FS-RELATO          
               MOVE WK-FS-RELATO       TO         WK-AREA-STAT          
-              MOVE 'ERRO DA GRAVA«√O NO ARQUIVO DE SAIDA RELATO'       
+              MOVE 'ERRO DA GRAVA√á√ÉO NO ARQUIVO DE SAIDA RELATO'       
                                       TO         WK-AREA-MSG           
               CALL WK-ABENDA          USING      WK-AREA               
            END-IF.                                                     
