@@ -5,7 +5,7 @@
         INSTALLATION.   QINTESS PAULISTA.                               
                                                                         
        *OBJETIVO.       DESENVOLVER UM PROGRAMA PARA LER O ARQUIVO      
-       *                DE ENTRADA ARQENT E GRAVAR NA SAÌDA APENAS      
+       *                DE ENTRADA ARQENT E GRAVAR NA SA√≠DA APENAS      
        *                CONTAS ATIVAS, OU SEJA, CAMPO ENT-STATUS = "A". 
                                                                         
        *----------------------------------------------------------------
@@ -267,7 +267,7 @@
             DISPLAY '*                                                *'.
 	    DISPLAY '*  QTDE DE CONTAS ATIVAS.........: '                
                      WK-QTD-ATIVAS '    *'.                              
-            DISPLAY '*  QTDE DE CONTAS N√O ATIVAS.....: '                
+            DISPLAY '*  QTDE DE CONTAS N√ÉO ATIVAS.....: '                
                      WK-QTD-NAO-ATIVAS '    *'.                          
             DISPLAY '**************************************************'.
        *                                                                 
