@@ -30,3 +30,5 @@ JOB INPUT ARQENT START PROC-INICIO FINISH PROC-FINAL
     DISPLAY '*  REGISTROS GRAVADOS ARQSAI .: ' WGRAVADOS '  *'	
     DISPLAY '*                                      *'	        
     DISPLAY '*  QTDE DE CONTAS ATIVAS .....: ' WATIVOS   '  *'	
+
+      
