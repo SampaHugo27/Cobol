@@ -101,7 +101,7 @@
                                                                          
         01  WS-CODIGO-AREA                  PIC X(30)   VALUE SPACES.    
        *---------------------------------------------------------------* 
-       *         LAYOUT DO RELATORIO - AREA DE CABEÇALHOS              * 
+       *         LAYOUT DO RELATORIO - AREA DE CABEÃ‡ALHOS              * 
        *---------------------------------------------------------------* 
         01  CAB-01.                                                      
             05 FILLER       PIC X(29)       VALUE SPACES.
@@ -537,5 +537,5 @@
 		                                                                
                              
                                                                                                                                                                                           
-                                                                                                            
+                                                                                                       
                             
