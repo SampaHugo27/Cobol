@@ -2,7 +2,7 @@
                                                                         
        PROGRAM-ID. VRB670S.                                             
                                                                         
-       AUTHOR. LUIS.                                                    
+       AUTHOR. HUGO DA SILVA SAMPAIO.                                                
                                                                         
       ******************************************************************
                                                                         
