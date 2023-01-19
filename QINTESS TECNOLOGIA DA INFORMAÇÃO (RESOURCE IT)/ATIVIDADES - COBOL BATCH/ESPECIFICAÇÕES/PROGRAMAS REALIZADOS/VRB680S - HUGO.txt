@@ -1,0 +1,658 @@
+       IDENTIFICATION                      DIVISION.                    
+      *================================================================*
+       PROGRAM-ID.                         VRB680S.                     
+       AUTHOR.                             HUGO SAMPAIO.                
+       INSTALLATION.                       QINTESS PAULISTA.            
+      *================================================================*
+      *----------------------------------------------------------------*
+      * OBJETIVO: REALIZAR A LEITURA DO ARQUIVO VSAM CONTAS E BUSCAR   *
+      * OS CARTOES RELACIONADOS A ESSA CONTA NO VSAM CARTOES ATRAVES   *
+      * DA CHAVE CONTA. LOGO EM SEGUIDA, EH GERADO UM RELATORIO        *
+      * DEMONSTRANDO O NOME DO CLIENTE, SUA CONTA E A LISTA DE TODOS   *
+      * OS SEUS CARTOES JUNTAMENTE COM A BANDEIRA E STATUS DE CADA UM. *
+      *----------------------------------------------------------------*
+      *================================================================*
+       ENVIRONMENT                         DIVISION.                    
+      *================================================================*
+       CONFIGURATION                       SECTION.                     
+      *----------------------------------------------------------------*
+       SOURCE-COMPUTER.                    IBM-PC.                      
+       OBJECT-COMPUTER.                    IBM-PC.                      
+       SPECIAL-NAMES.                      DECIMAL-POINT IS COMMA.      
+      *----------------------------------------------------------------*
+       INPUT-OUTPUT                        SECTION.                     
+      *----------------------------------------------------------------*
+       FILE-CONTROL.                                                    
+                                                                        
+           SELECT CONTAS         ASSIGN TO CONTAS                       
+           ORGANIZATION          IS        INDEXED                      
+           ACCESS MODE           IS        SEQUENTIAL                   
+           RECORD KEY            IS        CONTA-CHAVE                  
+           FILE STATUS           IS        WS-FS-CON.                   
+      *----------------------------------------------------------------*
+           SELECT CARTOES        ASSIGN TO CARTOES                      
+           ORGANIZATION          IS        INDEXED                      
+           ACCESS MODE           IS        DYNAMIC                      
+           RECORD KEY            IS        CARTAO-CHAVE                 
+           FILE STATUS           IS        WS-FS-CAR.                   
+      *----------------------------------------------------------------*
+           SELECT RELATO         ASSIGN TO RELATO                       
+           FILE STATUS           IS        WS-FS-REL.                   
+      *================================================================*
+       DATA                                DIVISION.                    
+      *================================================================*
+       FILE                                SECTION.                     
+      *----------------------------------------------------------------*
+       FD  CONTAS                                                       
+                                                                        
+           RECORD      CONTAINS  60 CHARACTERS                          
+           DATA RECORD IS        REG-CONTAS.                            
+                                                                        
+       01  REG-CONTAS.                                                  
+           05 CONTA-CHAVE                  PIC 9(10).                   
+           05 CONTA-CPF                    PIC 9(11).                   
+           05 CONTA-NOME                   PIC X(30).                   
+           05 CONTA-STATUS                 PIC X(01).                   
+           05 FILLER                       PIC X(08).                   
+      *----------------------------------------------------------------*
+       FD  CARTOES      
+           RECORD      CONTAINS  50 CHARACTERS                          
+           DATA RECORD IS        REG-CARTOES.                           
+                                                                        
+       01  REG-CARTOES.                                                 
+           05 CARTAO-CHAVE.                                             
+              10 CARTAO-CONTA              PIC 9(10).                   
+              10 CARTAO-CARTAO             PIC 9(10).                   
+           05 CARTAO-VALIDADE              PIC 9(04).                   
+           05 CARTAO-BANDEIRA              PIC X(15).                   
+           05 CARTAO-STATUS                PIC X(01).                   
+           05 FILLER                       PIC X(10).                   
+      *----------------------------------------------------------------*
+       FD  RELATO                          RECORDING MODE F.            
+                                                                        
+       01  REG-LINHA                       PIC X(80).                   
+      *----------------------------------------------------------------*
+       WORKING-STORAGE                     SECTION.                     
+      *----------------------------------------------------------------*
+      *                   DECLARACAO DE VARIAVEIS                      *
+      *----------------------------------------------------------------*
+      *                   VARIAVEIS DE FILE-STATUS                     *
+      *----------------------------------------------------------------*
+       77  WS-FS-CON                       PIC X(02)     VALUE '00'.    
+       77  WS-FS-CAR                       PIC X(02)     VALUE '00'.    
+       77  WS-FS-REL                       PIC X(02)     VALUE '00'.    
+      *----------------------------------------------------------------*
+      *                         CONTADORES                             *
+      *----------------------------------------------------------------*
+       77  WS-CT-LIN                       PIC 9(03)     VALUE 99.      
+       77  WS-CT-PAG                       PIC 9(03)     VALUE ZEROS.   
+       77  WS-CT-CARTOES                   PIC 9(03)     VALUE ZEROS.   
+                                                                        
+       77  WS-CT-ATIVOS                    PIC 9(10)     VALUE ZEROS.   
+       77  WS-CT-INATIVOS                  PIC 9(10)     VALUE ZEROS.   
+       77  WS-CT-BLOQUEADOS                PIC 9(10)     VALUE ZEROS.   
+                                                                        
+       77  WS-CD-ATIVOS                    PIC 9(10)     VALUE ZEROS.   
+       77  WS-CD-INATIVOS                  PIC 9(10)     VALUE ZEROS.   
+       77  WS-CD-BLOQUEADOS                PIC 9(10)     VALUE ZEROS.   
+                                                                        
+       77  WS-LIDOS-VSAM1                  PIC 9(10)     VALUE ZEROS.   
+       77  WS-LIDOS-VSAM2                  PIC 9(10)     VALUE ZEROS.   
+                                                                        
+      *----------------------------------------------------------------*
+      *                        VARIAVEIS                               *
+      *----------------------------------------------------------------*
+       77  WS-CONTA-CARTAO                 PIC 9(10)     VALUE ZEROS.   
+       77  WS-CONTA-CHAVE                  PIC 9(10)     VALUE ZEROS.   
+      *----------------------------------------------------------------*
+      *                       AREA DE ABEND                            *
+      *----------------------------------------------------------------*
+       77  WS-ABENDA                       PIC X(08)   VALUE 'ABENDA31'.
+       01  WS-AREA.                                                     
+           05 WS-AREA-PGM                  PIC X(08)   VALUE 'VRB680S'. 
+           05 WS-AREA-STAT                 PIC X(03)   VALUE SPACES.    
+           05 WS-AREA-MSG                  PIC X(50)   VALUE SPACES.    
+                                                                        
+       01  WS-CODIGO-AREA                  PIC X(30)   VALUE SPACES.    
+      *----------------------------------------------------------------*
+      *                   LAYOUT  DO RELATORIO                         *
+      *----------------------------------------------------------------*
+      *                        CABECALHO                               *
+      *----------------------------------------------------------------*
+       01  CAB-01.                                                      
+           05 FILLER                       PIC X(28)  VALUE SPACES.     
+           05 FILLER                       PIC X(09)  VALUE 'BRADESCO '.
+           05 FILLER                       PIC X(07)  VALUE 'CARTOES'.  
+           05 FILLER                       PIC X(19)  VALUE SPACES.     
+           05 FILLER                       PIC X(06)  VALUE 'DATA: '.   
+           05 CAB-DIA                      PIC 99     VALUE  ZEROS.     
+           05 FILLER                       PIC X(01)  VALUE '/'.        
+           05 CAB-MES                      PIC 99     VALUE ZEROS.      
+           05 FILLER                       PIC X(01)  VALUE '/'.        
+           05 CAB-ANO                      PIC 9999   VALUE ZEROS.      
+           05 FILLER                       PIC X(01)  VALUE SPACES.     
+      *----------------------------------------------------------------*
+       01  CAB-02.                                                      
+           05 FILLER                       PIC X(08)  VALUE 'VRB680S '. 
+           05 FILLER                       PIC X(15)  VALUE SPACES.     
+           05 FILLER                       PIC X(09)  VALUE 'RELATORIO'.
+           05 FILLER                       PIC X(09)  VALUE ' CONTA X '.
+           05 FILLER                       PIC X(07)  VALUE 'CARTOES'.  
+           05 FILLER                       PIC X(15)  VALUE SPACES.     
+           05 FILLER                       PIC X(09)  VALUE 'PAGINA...'.
+           05 FILLER                       PIC X(04)  VALUE '..: '.     
+           05 CAB-PAGINA                   PIC 999    VALUE  ZEROS.     
+           05 FILLER                       PIC X(01)  VALUE SPACES.     
+      *----------------------------------------------------------------*
+       01  CAB-03.                                                      
+           05 FILLER                       PIC X(80)  VALUE ALL '-'.    
+      *----------------------------------------------------------------*
+       01  CAB-04.                                                      
+           05 FILLER                       PIC X(03)  VALUE 'CPF'.      
+           05 FILLER                       PIC X(15)  VALUE SPACES.     
+           05 FILLER                       PIC X(07)  VALUE 'CLIENTE'.  
+           05 FILLER                       PIC X(55)  VALUE SPACES.     
+      *----------------------------------------------------------------*
+       01  CAB-05.                                                      
+           05 FILLER                       PIC X(05)  VALUE 'CONTA'.    
+           05 FILLER                       PIC X(13)  VALUE SPACES.     
+           05 FILLER                       PIC X(06)  VALUE 'CARTAO'.   
+           05 FILLER                       PIC X(09)  VALUE SPACES.     
+           05 FILLER                       PIC X(08)  VALUE 'BANDEIRA'. 
+           05 FILLER                       PIC X(09)  VALUE SPACES.     
+           05 FILLER                       PIC X(07)  VALUE 'STATUS '.  
+           05 FILLER                       PIC X(06)  VALUE 'CARTAO'.   
+           05 FILLER                       PIC X(17)  VALUE SPACES.     
+      *----------------------------------------------------------------*
+      *                 AREA DE DETALHE - LAYOUT                       *
+      *----------------------------------------------------------------*
+       01  DET-01.                                                      
+           05 DET-CPF                      PIC X(11)  VALUE ZEROS.      
+           05 FILLER                       PIC X(07)  VALUE SPACES.     
+           05 DET-CLIENTE                  PIC X(30)  VALUE SPACES.     
+           05 FILLER                       PIC X(32)  VALUE SPACES.     
+      *----------------------------------------------------------------*
+       01  DET-02.                                                      
+           05 DET-CONTA                    PIC X(10)  VALUE SPACES.     
+           05 FILLER                       PIC X(08)  VALUE SPACES.     
+           05 DET-CARTAO                   PIC 9(10)  VALUE ZEROS.   
+           05 FILLER                       PIC X(05)  VALUE SPACES.     
+           05 DET-BANDEIRA                 PIC X(15)  VALUE SPACES.     
+           05 FILLER                       PIC X(04)  VALUE SPACES.     
+           05 DET-STATUS                   PIC X(09)  VALUE SPACES.     
+           05 FILLER                       PIC X(18)  VALUE SPACES.     
+      *----------------------------------------------------------------*
+      *                AREA DE TOTALIZADORES - LAYOUT                  *
+      *----------------------------------------------------------------*
+       01  TOT-01.                                                      
+           05 FILLER                       PIC X(06)  VALUE 'TOTAL '.   
+           05 FILLER                       PIC X(08)  VALUE 'CARTOES '. 
+           05 FILLER                       PIC X(09)  VALUE 'IMPRESSOS'.
+           05 FILLER                       PIC X(02)  VALUE '.:'.       
+           05 FILLER                       PIC X(10)  VALUE SPACES.     
+           05 TOT-CARTOES                  PIC Z.ZZZ.ZZZ.ZZ9.           
+      *----------------------------------------------------------------*
+       01  TOT-02.                                                      
+           05 FILLER                       PIC X(06)  VALUE 'TOTAL '.   
+           05 FILLER                       PIC X(08)  VALUE 'CARTOES '. 
+           05 FILLER                       PIC X(09)  VALUE 'ATIVOS...'.
+           05 FILLER                       PIC X(02)  VALUE '.:'.       
+           05 FILLER                       PIC X(10)  VALUE SPACES.     
+           05 TOT-ATIVOS                   PIC Z.ZZZ.ZZZ.ZZ9.           
+      *----------------------------------------------------------------*
+       01  TOT-03.                                                      
+           05 FILLER                       PIC X(06)  VALUE 'TOTAL '.   
+           05 FILLER                       PIC X(08)  VALUE 'CARTOES '. 
+           05 FILLER                       PIC X(09)  VALUE 'INATIVOS.'.
+           05 FILLER                       PIC X(02)  VALUE '.:'.       
+           05 FILLER                       PIC X(10)  VALUE SPACES.     
+           05 TOT-INATIVOS                 PIC Z.ZZZ.ZZZ.ZZ9.           
+      *----------------------------------------------------------------*
+       01  TOT-04.                                                      
+           05 FILLER                       PIC X(06) VALUE 'TOTAL '.    
+           05 FILLER                       PIC X(08) VALUE 'CARTOES '.  
+           05 FILLER                       PIC X(10) VALUE 'BLOQUEADOS'.
+           05 FILLER                       PIC X(01) VALUE ':'.         
+           05 FILLER                       PIC X(10) VALUE SPACES.      
+           05 TOT-BLOQUEADOS               PIC Z.ZZZ.ZZZ.ZZ9.           
+      *================================================================*
+       PROCEDURE                           DIVISION.                    
+      *================================================================*
+       0000-PRINCIPAL                      SECTION.                     
+      *================================================================*
+           PERFORM 1000-INICIO             THRU  1000-99-INICIO-EXIT.   
+           PERFORM 2000-PROCESSA           THRU  2000-99-PROCESSA-EXIT  
+                                           UNTIL WS-FS-CAR   EQUAL '10' 
+                                           AND   WS-FS-CON   EQUAL '10'.
+           PERFORM 7000-FINALIZA           THRU  7000-99-FINALIZA-EXIT. 
+           STOP RUN.                                                    
+      *----------------------------------------------------------------*
+       0000-99-PRINCIPAL-EXIT.             EXIT.                        
+      *================================================================*
+       1000-INICIO                         SECTION.                     
+      *================================================================*
+           DISPLAY '**************************************************'.
+           DISPLAY '           INICIANDO O PROGRAMA...                '.
+           DISPLAY '**************************************************'.
+           DISPLAY '                                                  '.
+      *----------------------------------------------------------------*
+      * ABERTURA DE ARQUIVOS VSAM E VERIFICACAO DE FILE STATUS         *
+      *----------------------------------------------------------------*
+           MOVE  '1000-INICIO'             TO         WS-CODIGO-AREA.   
+                                                                        
+           OPEN  INPUT                     CONTAS.                      
+           IF  WS-FS-CON                 NOT EQUAL  '00'                
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY '*     VRB680S - PROGRAMA CANCELADO:      *'     
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY 'ERRO NO: '                    WS-CODIGO-AREA    
+               DISPLAY 'STATUS:  '                    WS-FS-CON         
+               MOVE WS-FS-CON            TO           WS-AREA-STAT      
+               MOVE 'ERRO NA ABERTURA DO VSAM CONTAS'                   
+                                           TO         WS-AREA-MSG       
+               CALL WS-ABENDA            USING        WS-AREA           
+           END-IF.                                                      
+      *----------------------------------------------------------------*
+           OPEN  INPUT                   CARTOES.                       
+           IF  WS-FS-CAR                 NOT EQUAL  '00'                
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY '*     VRB680S - PROGRAMA CANCELADO:      *'     
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY 'ERRO NO: '                    WS-CODIGO-AREA    
+               DISPLAY 'STATUS:  '                    WS-FS-CAR         
+               MOVE  WS-FS-CAR           TO           WS-AREA-STAT      
+               MOVE  'ERRO NA ABERTURA DO ARQUIVO VSAM CARTOES'         
+                                         TO           WS-AREA-MSG       
+               CALL  WS-ABENDA           USING        WS-AREA           
+           END-IF.                                                      
+      *----------------------------------------------------------------*
+           OPEN  OUTPUT                    RELATO.                      
+                                                                        
+           IF  WS-FS-REL                   NOT EQUAL  '00'              
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY '*     VRB680S - PROGRAMA CANCELADO:      *'     
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY 'ERRO NO: '                    WS-CODIGO-AREA    
+               DISPLAY 'STATUS:  '                    WS-FS-REL         
+               MOVE  WS-FS-REL             TO         WS-AREA-STAT      
+               MOVE  'ERRO NA ABERTURA DO ARQUIVO RELATO'             
+                                           TO         WS-AREA-MSG       
+               CALL  WS-ABENDA             USING      WS-AREA           
+           END-IF.                                                      
+      *----------------------------------------------------------------*
+           PERFORM 1100-LEITURA-CONTAS.                                 
+                                                                        
+           IF  WS-FS-CON                  EQUAL '10'                    
+               DISPLAY ' ******************************************** ' 
+               DISPLAY ' **********  ARQUIVO CONTAS VAZIO  ********** ' 
+               DISPLAY ' ******************************************** ' 
+               MOVE  '10'                 TO          WS-FS-CAR         
+               PERFORM 1900-CABECALHO                                   
+               GO TO 1000-99-INICIO-EXIT                                
+           END-IF.                                                      
+                                                                        
+           PERFORM 1200-START-CARTOES.                                  
+                                                                        
+           IF  WS-FS-CAR                  EQUAL '23'                    
+               DISPLAY ' ******************************************** ' 
+               DISPLAY ' ******* ARQUIVO CONTAS NAO TEM CHAVE ******* ' 
+               DISPLAY ' *******   CORRESPONDENTE OU MAIOR.   ******* ' 
+               DISPLAY ' ******************************************** ' 
+               MOVE  '10'                 TO          WS-FS-CAR         
+               PERFORM 1900-CABECALHO                                   
+               GO TO 1000-99-INICIO-EXIT                                
+           END-IF.                                                      
+                                                                        
+           PERFORM 1300-READNEXT-CARTOES.                               
+                                                                        
+      *----------------------------------------------------------------*
+       1000-99-INICIO-EXIT.                EXIT.                        
+      *================================================================*
+       1100-LEITURA-CONTAS                 SECTION.                     
+      *================================================================*
+      * LEITURA DOS REGISTROS EM CONTAS                                *
+      *----------------------------------------------------------------*
+           MOVE '1100-LEITURA-CONTAS'      TO         WS-CODIGO-AREA.   
+                                                                        
+           READ CONTAS.                                                 
+                                                                        
+           IF  WS-FS-CON  NOT EQUAL '00'                                
+           AND WS-FS-CON  NOT EQUAL '10'                                
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY '*     VRB680S - PROGRAMA CANCELADO:      *'     
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY 'ERRO NO: '                    WS-CODIGO-AREA    
+               DISPLAY 'STATUS:  '                    WS-FS-CON         
+               MOVE    WS-FS-CON               TO     WS-AREA-STAT      
+               MOVE    'ERRO AO LER ARQUIVO VSAM CONTAS'                
+                                               TO     WS-AREA-MSG       
+               CALL WS-ABENDA                  USING  WS-AREA           
+           END-IF.                                                      
+                                                                        
+           ADD  1                          TO         WS-LIDOS-VSAM1.   
+           PERFORM 2100-CHECA-ST-CONTA.                                 
+                                                                        
+           MOVE CONTA-CHAVE                TO         WS-CONTA-CHAVE.   
+                                                                        
+      *----------------------------------------------------------------*
+       1100-99-LEITURA-CONTAS-EXIT.        EXIT.                        
+      *================================================================*
+       1200-START-CARTOES                  SECTION.                     
+      *================================================================*
+      * MOVIMENTO A CHAVE DO VSAM CONTAS A CHAVE CORRESPONDENTE NO     *
+      * VSAM CARTOES                                                   *
+      *----------------------------------------------------------------*
+           MOVE '1200-START-CARTOES'       TO         WS-CODIGO-AREA.   
+                                                                        
+           MOVE  CONTA-CHAVE               TO           CARTAO-CONTA.   
+           START CARTOES                   KEY NOT LESS CARTAO-CONTA.   
+                                                                        
+           IF  WS-FS-CAR NOT EQUAL '00'    AND WS-FS-CAR NOT EQUAL '23' 
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY '*     VRB680S - PROGRAMA CANCELADO:      *'     
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY 'ERRO: ' WS-CODIGO-AREA                          
+               DISPLAY 'VRB680S: FILE STATUS:       ' WS-FS-CAR         
+               MOVE    WS-FS-CAR               TO     WS-AREA-STAT      
+               MOVE    'ERRO AO DAR START NO VSAM CARTOES '             
+                                               TO     WS-AREA-MSG       
+               CALL    WS-ABENDA               USING  WS-AREA           
+           END-IF.                                                      
+                                                                        
+      *----------------------------------------------------------------*
+       1200-99-START-CARTOES-EXIT.         EXIT.                        
+      *================================================================*
+       1300-READNEXT-CARTOES               SECTION.                     
+      *================================================================*
+           MOVE '1300-READNEXT'            TO         WS-CODIGO-AREA.   
+                                                                        
+           READ CARTOES  NEXT.                                          
+                                                                        
+           IF  WS-FS-CAR NOT EQUAL '00'                                 
+           AND WS-FS-CAR NOT EQUAL '10'                                 
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY '*     VRB680S - PROGRAMA CANCELADO:      *'     
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY 'ERRO:    '                    WS-CODIGO-AREA    
+               DISPLAY 'VRB680S: FILE STATUS:       ' WS-FS-CAR         
+               MOVE    WS-FS-CAR               TO     WS-AREA-STAT      
+               MOVE    'ERRO AO LER ARQUIVO VSAM CARTOES '              
+                                               TO     WS-AREA-MSG       
+               CALL    WS-ABENDA               USING  WS-AREA           
+           END-IF.                                                      
+                                                                        
+           ADD  1                          TO         WS-LIDOS-VSAM2.   
+                                                                        
+           MOVE CARTAO-CONTA               TO         WS-CONTA-CARTAO.  
+                                                                        
+      *----------------------------------------------------------------*
+       1300-99-READNEXT-CARTOES-EXIT.      EXIT.                        
+      *================================================================*
+       1900-CABECALHO                      SECTION.                     
+      *================================================================*
+           ADD   1                         TO         WS-CT-PAG.        
+           MOVE  WS-CT-PAG                 TO         CAB-PAGINA.       
+                                                                        
+           IF  WS-CT-PAG                   GREATER    1                 
+               MOVE  SPACES                TO         REG-LINHA         
+               WRITE                       REG-LINHA                    
+               PERFORM 2500-STATUS-REGLINHA                         
+           END-IF.                                                  
+                                                                    
+           MOVE FUNCTION CURRENT-DATE(7:2) TO         CAB-DIA.      
+           MOVE FUNCTION CURRENT-DATE(5:2) TO         CAB-MES.      
+           MOVE FUNCTION CURRENT-DATE(1:4) TO         CAB-ANO.      
+                                                                    
+           WRITE REG-LINHA                 FROM       CAB-01.       
+           PERFORM 2500-STATUS-REGLINHA.                            
+           WRITE REG-LINHA                 FROM       CAB-02.       
+           PERFORM 2500-STATUS-REGLINHA.                            
+           WRITE REG-LINHA                 FROM       CAB-03.       
+           PERFORM 2500-STATUS-REGLINHA.                            
+           MOVE  SPACES                    TO         REG-LINHA.    
+           WRITE REG-LINHA.                                         
+           PERFORM 2500-STATUS-REGLINHA.                            
+                                                                    
+           MOVE      4                     TO         WS-CT-LIN.    
+                                                                    
+           IF  WS-FS-CON                   NOT  EQUAL '10'          
+               WRITE REG-LINHA             FROM       CAB-04            
+               PERFORM 2500-STATUS-REGLINHA                             
+               WRITE REG-LINHA             FROM       CAB-05            
+               PERFORM 2500-STATUS-REGLINHA                             
+               MOVE  6                     TO         WS-CT-LIN         
+           END-IF.                                                      
+      *----------------------------------------------------------------*
+       1900-CABECALHO-EXIT.                EXIT.                        
+      *================================================================*
+       2000-PROCESSA                       SECTION.                     
+      *================================================================*
+           IF  WS-CONTA-CARTAO             EQUAL      WS-CONTA-CHAVE    
+           AND WS-FS-CAR                   NOT EQUAL  '10'              
+                                                                        
+               ADD     1                   TO         WS-CT-CARTOES     
+               MOVE    CONTA-CPF           TO         DET-CPF           
+               MOVE    CONTA-NOME          TO         DET-CLIENTE       
+                                                                        
+               IF      WS-CT-CARTOES       EQUAL      1                 
+                       MOVE  CONTA-CHAVE   TO         DET-CONTA         
+               END-IF                                               
+                                                                    
+               MOVE    CARTAO-CARTAO       TO         DET-CARTAO    
+               MOVE    CARTAO-BANDEIRA     TO         DET-BANDEIRA  
+               MOVE    CARTAO-STATUS       TO         DET-STATUS    
+                                                                    
+               PERFORM 2200-CHECA-ST-CARTAO                         
+               PERFORM 2600-IMPRIMA-DETALHE                         
+               PERFORM 1300-READNEXT-CARTOES                        
+                                                                    
+           ELSE                                                     
+               IF      WS-FS-CAR           EQUAL      '00'          
+                       MOVE  SPACES        TO         REG-LINHA     
+                       WRITE               REG-LINHA                
+                       PERFORM 2500-STATUS-REGLINHA                 
+               END-IF                                               
+                                                                    
+               PERFORM 1100-LEITURA-CONTAS                          
+               MOVE    ZEROS               TO         WS-CT-CARTOES 
+           END-IF.                                                  
+      *----------------------------------------------------------------*
+       2000-99-PROCESSA-EXIT.              EXIT.                        
+      *================================================================*
+       2100-CHECA-ST-CONTA                 SECTION.                     
+      *================================================================*
+      * VERIFICA O STATUS-CONTA NO ARQUIVO VSAM CONTA                  *
+      *----------------------------------------------------------------*
+           MOVE '2200-CHECA-STATUS'        TO         WS-CODIGO-AREA.   
+                                                                        
+           IF  CONTA-STATUS                EQUAL      'A'               
+               ADD          1              TO         WS-CT-ATIVOS      
+           ELSE                                                         
+               IF  CONTA-STATUS            EQUAL      'B'               
+                   ADD      1              TO         WS-CT-BLOQUEADOS  
+               ELSE                                                     
+                   IF  CONTA-STATUS        EQUAL      'I'               
+                       ADD  1              TO         WS-CT-INATIVOS    
+                  END-IF                                                
+               END-IF                                                   
+           END-IF.                                                      
+                                                                        
+      *----------------------------------------------------------------*
+       2100-99-CHECA-ST-CONTA-EXIT.        EXIT.                        
+      *================================================================*
+       2200-CHECA-ST-CARTAO                SECTION.                     
+      *================================================================*
+      * VERIFICA O STATUS DO CARTAO NO ARQUIVO VSAM CARTOES            *
+      *----------------------------------------------------------------*
+                                                                        
+           IF  CARTAO-STATUS               EQUAL      'A'               
+               ADD          1              TO         WS-CD-ATIVOS      
+           ELSE                                                         
+               IF  CARTAO-STATUS           EQUAL      'I'               
+                   ADD      1              TO         WS-CD-INATIVOS    
+               ELSE                                                     
+                   IF  CARTAO-STATUS       EQUAL      'B'               
+                       ADD  1              TO         WS-CD-BLOQUEADOS  
+                   END-IF                                               
+               END-IF                                                   
+           END-IF.    
+      *----------------------------------------------------------------*                                                      
+       2200-CHECA-ST-CARTAO-EXIT.          EXIT.                        
+      *================================================================*  
+       2500-STATUS-REGLINHA                SECTION.                     
+      *================================================================*
+           MOVE '2500-STATUS-REGLINHA'     TO         WS-CODIGO-AREA.   
+                                                                        
+           IF  WS-FS-REL                   NOT EQUAL  '00'              
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY '*     VRB680S - PROGRAMA CANCELADO:      *'     
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY 'ERRO NO: '                    WS-CODIGO-AREA    
+               DISPLAY 'STATUS:  '                    WS-FS-REL         
+               MOVE WS-FS-REL              TO         WS-AREA-STAT      
+               MOVE 'ERRO AO GRAVAR LINHA EM RELATO '                   
+                                           TO         WS-AREA-MSG       
+               CALL WS-ABENDA              USING      WS-AREA           
+           END-IF.                                                      
+                                                                        
+      *----------------------------------------------------------------*
+       2500-STATUS-REGLINHA-EXIT.          EXIT.                        
+      *================================================================*
+       2600-IMPRIMA-DETALHE                SECTION.                     
+      *================================================================*
+           IF  WS-CT-LIN                   GREATER    49                
+               PERFORM 1900-CABECALHO                                   
+           END-IF.                                                      
+                                                                        
+           IF  WS-CT-CARTOES               EQUAL      1                 
+               WRITE REG-LINHA             FROM       DET-01            
+               PERFORM 2500-STATUS-REGLINHA                             
+               ADD    1                    TO         WS-CT-LIN         
+           END-IF.                                                      
+                                                                        
+           WRITE     REG-LINHA             FROM       DET-02            
+           PERFORM   2500-STATUS-REGLINHA.                              
+           ADD       1                     TO         WS-CT-LIN         
+                                                                        
+           MOVE      SPACES                TO         DET-CONTA.        
+                                                                        
+      *----------------------------------------------------------------*
+       2600-IMPRIMA-DETALHE-EXIT.          EXIT.                        
+      *================================================================*
+       3000-IMPRIMA-TOT                    SECTION.                     
+      *================================================================*
+           IF  WS-CT-LIN                   GREATER    44                
+               PERFORM 1900-CABECALHO                                   
+           END-IF.                                                      
+                                                                        
+           COMPUTE   WS-CT-CARTOES = WS-CD-ATIVOS + WS-CD-INATIVOS +    
+                     WS-CD-BLOQUEADOS.                                  
+           MOVE      WS-CT-CARTOES         TO         TOT-CARTOES.      
+           MOVE      WS-CD-ATIVOS          TO         TOT-ATIVOS.       
+           MOVE      WS-CD-INATIVOS        TO         TOT-INATIVOS.     
+           MOVE      WS-CD-BLOQUEADOS      TO         TOT-BLOQUEADOS.   
+                                                                        
+           MOVE      SPACES                TO         REG-LINHA.        
+           WRITE     REG-LINHA.                                         
+           PERFORM   2500-STATUS-REGLINHA.                              
+           WRITE     REG-LINHA             FROM       TOT-01.           
+           PERFORM   2500-STATUS-REGLINHA.                              
+           WRITE     REG-LINHA             FROM       TOT-02.           
+           PERFORM   2500-STATUS-REGLINHA.                              
+           WRITE     REG-LINHA             FROM       TOT-03.           
+           PERFORM   2500-STATUS-REGLINHA.                              
+           WRITE     REG-LINHA             FROM       TOT-04.           
+           PERFORM   2500-STATUS-REGLINHA.                              
+                                                                        
+      *----------------------------------------------------------------*
+       3000-99-IMPRIMA-TOT-EXIT.           EXIT.                        
+      *================================================================*
+       7000-FINALIZA                       SECTION.                     
+      *================================================================*
+           MOVE '7000-FINALIZA'            TO         WS-CODIGO-AREA.   
+                                                                        
+           MOVE SPACES                     TO         REG-LINHA.        
+           WRITE     REG-LINHA.                                         
+           ADD       1                     TO         WS-CT-LIN.        
+                                                                        
+           PERFORM   3000-IMPRIMA-TOT.                                  
+                                                                        
+      *----------------------------------------------------------------*
+      *----------------------------------------------------------------*
+      * FECHAMENTO DOS ARQUIVOS E VERIFICACAO DE FILE STATUS           *
+      *----------------------------------------------------------------*
+           CLOSE     CONTAS.                                            
+           IF  WS-FS-CON                   NOT   EQUAL '00'             
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY '*     VRB680S - PROGRAMA CANCELADO:      *'     
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY 'ERRO NO: '                    WS-CODIGO-AREA    
+               DISPLAY 'STATUS:  '                    WS-FS-CON         
+               MOVE WS-FS-CON              TO         WS-AREA-STAT      
+               MOVE 'ERRO NO FECHAMENTO DO ARQUIVO VSAM CONTAS '        
+                                           TO         WS-AREA-MSG       
+               CALL WS-ABENDA              USING      WS-AREA           
+           END-IF.                                                      
+      *----------------------------------------------------------------*
+           CLOSE    CARTOES.                                            
+                                                                        
+           IF  WS-FS-CAR                   NOT   EQUAL '00'             
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY '*     VRB680S - PROGRAMA CANCELADO:      *'     
+               DISPLAY '*----------------------------------------*'     
+               DISPLAY 'ERRO NO: '                    WS-CODIGO-AREA    
+               DISPLAY 'STATUS:  '                    WS-FS-CAR         
+               MOVE WS-FS-CAR              TO         WS-AREA-STAT      
+               MOVE 'ERRO NO FECHAMENTO DO ARQUIVO VSAM CARTOES '       
+                                           TO         WS-AREA-MSG       
+               CALL WS-ABENDA              USING      WS-AREA           
+           END-IF.                                                      
+                                                                        
+      *----------------------------------------------------------------*
+           CLOSE    RELATO.                                             
+                                                                        
+           IF WS-FS-REL                    NOT   EQUAL '00'             
+              DISPLAY '*----------------------------------------*'      
+              DISPLAY '*     VRB680S - PROGRAMA CANCELADO:      *'      
+              DISPLAY '*----------------------------------------*'      
+              DISPLAY 'ERRO NO: '                     WS-CODIGO-AREA    
+              DISPLAY 'STATUS:  '                     WS-FS-CAR         
+              MOVE WS-FS-CAR               TO         WS-AREA-STAT      
+              MOVE 'ERRO NO FECHAMENTO DO ARQUIVO VSAM CARTOES '        
+                                           TO         WS-AREA-MSG       
+              CALL WS-ABENDA               USING      WS-AREA           
+           END-IF.                                                      
+      *----------------------------------------------------------------*
+           PERFORM 7500-RESUMO.                                         
+                                                                        
+           DISPLAY '                                                  '.
+           DISPLAY '**************************************************'.
+           DISPLAY '         FIM DO PROGRAMA - THE END                '.
+           DISPLAY '**************************************************'.
+                                                                        
+      *----------------------------------------------------------------*
+       7000-99-FINALIZA-EXIT.              EXIT.                        
+      *================================================================*
+      *================================================================*
+       7500-RESUMO                         SECTION.                     
+      *================================================================*
+      * RESULTADO DISPONIVEL NA SAIDA SYSOUT                           *
+      *----------------------------------------------------------------*
+           DISPLAY '**************************************************'.
+           DISPLAY '       RESUMO/BALANCO GERAL DO PROGRAMA           '.
+           DISPLAY '**************************************************'.
+           DISPLAY '**************************************************'.
+           DISPLAY '* LIDOS EM CONTAS                ' WS-LIDOS-VSAM1  .
+           DISPLAY '* LIDOS EM CARTOES           =   ' WS-LIDOS-VSAM2  .
+           DISPLAY '* QTDE  DE CONTAS ATIVAS     =   ' WS-CT-ATIVOS    .
+           DISPLAY '=================================================='.
+           DISPLAY '* QTDE  DE CONTAS INATIVAS   =   ' WS-CT-INATIVOS  .
+           DISPLAY '* QTDE  DE CONTAS BLOQUEADAS =   ' WS-CT-BLOQUEADOS.
+           DISPLAY '**************************************************'.
+           DISPLAY '**************************************************'.
+      *----------------------------------------------------------------*
+       7500-RESUMO-EXIT.                   EXIT.                        
+      *================================================================*
+     
+
+                                                                        

@@ -1,0 +1,657 @@
+      *===============================================================*
+       IDENTIFICATION                            DIVISION.             
+      *===============================================================*
+       PROGRAM-ID.     VRB673S.                                        
+       AUTHOR.         GABRIEL CASANOVA SILVA.                         
+       INSTALLATION.   QINTESS PAULISTA.                               
+                                                                       
+      *OBJETIVO.       DESENVOLVER UM PROGRAMA PARA LER O ARQUIVO      
+      *                DE ENTRADA ARQENT E GRAVAR NO ARQSAI E RELATORIO
+      *                CADA UM DOS REGISTROS LIDOS COM CHAVE DE QUEBRA.
+                                                                       
+      *===============================================================*
+       ENVIRONMENT                               DIVISION.             
+      *===============================================================*
+                                                                       
+      *---------------------------------------------------------------*
+       CONFIGURATION                             SECTION.              
+      *---------------------------------------------------------------*
+                                                                       
+       SOURCE-COMPUTER.                          IBM-PC.                
+       OBJECT-COMPUTER.                          IBM-PC.                
+       SPECIAL-NAMES.                            DECIMAL-POINT IS COMMA.
+                                                                        
+      *---------------------------------------------------------------* 
+       INPUT-OUTPUT                              SECTION.               
+      *---------------------------------------------------------------* 
+                                                                        
+       FILE-CONTROL.                                                    
+                                                                        
+           SELECT ARQENT              ASSIGN TO  ARQENT                 
+           ORGANIZATION               IS         SEQUENTIAL             
+           ACCESS MODE                IS         SEQUENTIAL             
+           FILE STATUS                IS         WK-FS-ARQENT.          
+                                                                        
+           SELECT ARQSAI              ASSIGN TO  ARQSAI                 
+           ORGANIZATION               IS         SEQUENTIAL             
+           ACCESS MODE                IS         SEQUENTIAL             
+           FILE STATUS                IS         WK-FS-ARQSAI.          
+                                                                        
+           SELECT RELATO              ASSIGN TO  RELATO                
+           ORGANIZATION               IS         SEQUENTIAL            
+           ACCESS MODE                IS         SEQUENTIAL            
+           FILE STATUS                IS         WK-FS-RELATO.         
+                                                                       
+      *===============================================================*
+       DATA                                      DIVISION.             
+      *===============================================================*
+                                                                       
+      *---------------------------------------------------------------*
+       FILE                                      SECTION.              
+      *---------------------------------------------------------------*
+                                                                       
+       FD  ARQENT                                                      
+           LABEL RECORD               ARE        STANDARD              
+           RECORD                     CONTAINS   60 CHARACTERS         
+           DATA RECORD                IS         REG-ENT               
+           RECORDING MODE             IS         F.                    
+                                                                       
+       01  REG-ENT.                                                    
+           05  ENT-CPF                PIC 9(11).                       
+           05  ENT-NOME-CLIENTE       PIC X(30).                       
+           05  ENT-VALOR-GASTO        PIC 9(15)V99.                    
+           05  FILLER                 PIC 9(02).                       
+                                                                       
+      *---------------------------------------------------------------*
+      *                                                                
+       FD  ARQSAI                                                      
+           LABEL RECORD               ARE        STANDARD              
+           RECORD                     CONTAINS   60 CHARACTERS         
+           DATA RECORD                IS         REG-SAI               
+           RECORDING MODE             IS         F.                    
+                                                                       
+       01  REG-SAI.                                                    
+           05  SAI-CPF                PIC 9(11).                       
+           05  SAI-NOME-CLIENTE       PIC X(30).                       
+           05  SAI-VALOR-GASTO        PIC 9(15)V99.                    
+           05  FILLER                 PIC 9(02).                       
+      *                                                                
+      *---------------------------------------------------------------*
+                                                                       
+       FD  RELATO                                                      
+           LABEL RECORD               ARE        STANDARD              
+           RECORD                     CONTAINS   80 CHARACTERS         
+           DATA RECORD                IS         RELATO-LRECL          
+           RECORDING MODE             IS         F.                    
+                                                                       
+       01  RELATO-LRECL               PIC X(80).                       
+      *---------------------------------------------------------------*
+       WORKING-STORAGE                           SECTION.              
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+      *                VARIAVEIS DE FILE-STATUS                       *
+      *---------------------------------------------------------------*
+      *                                                               *
+       77  WK-FS-ARQENT               PIC X(02)  VALUE ZEROES.         
+       77  WK-FS-ARQSAI               PIC X(02)  VALUE ZEROES.         
+       77  WK-FS-RELATO               PIC X(02)  VALUE ZEROES.         
+      *                                                               *
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+      *                AREA DE ABEND                                  *
+      *---------------------------------------------------------------*
+      *                                                               *
+       77  WK-ABENDA                  PIC X(08)  VALUE 'ABENDA31'.     
+       01  WK-AREA.                                                    
+           05  WK-AREA-PGM            PIC X(08)  VALUE 'VRB671'.       
+           05  WK-AREA-STAT           PIC X(03)  VALUE SPACES.         
+           05  WK-AREA-MSG            PIC X(50)  VALUE SPACES.         
+                                                                       
+       01  WK-CODIGO-AREA             PIC X(30)  VALUE SPACES.         
+      *                                                               *
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+      *                VARIAVEIS CONTADORES                           *
+      *---------------------------------------------------------------*
+      *                                                               *
+       77  WK-QTD-READS               PIC 9(10)  VALUE ZEROES.         
+       77  WK-QTD-ARQSAI              PIC 9(10)  VALUE ZEROES.         
+       77  WK-QTD-REGISTROS           PIC 9(10)  VALUE ZEROES.         
+      *                                                               *
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+      *                VARIAVEIS DATA E HORA                          *
+      *---------------------------------------------------------------*
+      *                                                               *
+       01  WK-DATA-ATUAL.                                              
+           05  WK-ANO-ATUAL           PIC 9(04)  VALUE ZEROES.         
+           05  WK-MES-ATUAL           PIC 9(02)  VALUE ZEROES.         
+           05  WK-DIA-ATUAL           PIC 9(02)  VALUE ZEROES.         
+                                                                       
+       01  WK-DATA-ATUAL-MASK.                                         
+           05  WK-DIA-MASK            PIC 9(02)  VALUE ZEROES.         
+           05  FILLER                 PIC X(01)  VALUE '/'.            
+           05  WK-MES-MASK            PIC 9(02)  VALUE ZEROES.         
+           05  FILLER                 PIC X(01)  VALUE '/'.            
+           05  WK-ANO-MASK            PIC 9(04)  VALUE ZEROES.         
+                                                                       
+       01  WK-HORA-ATUAL.                                              
+           05  WK-HOR-ATUAL           PIC 9(02)  VALUE ZEROES.         
+           05  WK-MIN-ATUAL           PIC 9(02)  VALUE ZEROES.         
+           05  WK-SEG-ATUAL           PIC 9(02)  VALUE ZEROES.         
+           05  WK-MIL-ATUAL           PIC 9(02)  VALUE ZEROES.         
+                                                                       
+       01  WK-HORA-ATUAL-MASK.                                         
+           05  WK-HOR-MASK            PIC 9(02)  VALUE ZEROES.         
+           05  FILLER                 PIC X(01)  VALUE ':'.            
+           05  WK-MIN-MASK            PIC 9(02)  VALUE ZEROES.         
+           05  FILLER                 PIC X(01)  VALUE ':'.            
+           05  WK-SEG-MASK            PIC 9(02)  VALUE ZEROES.         
+           05  FILLER                 PIC X(01)  VALUE ':'.            
+           05  WK-MIL-MASK            PIC 9(02)  VALUE ZEROES.         
+      *                                                               *
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+           05  WK-ANO-MASK            PIC 9(04)  VALUE ZEROES.         
+                                                                       
+       01  WK-HORA-ATUAL.                                              
+           05  WK-HOR-ATUAL           PIC 9(02)  VALUE ZEROES.         
+           05  WK-MIN-ATUAL           PIC 9(02)  VALUE ZEROES.         
+           05  WK-SEG-ATUAL           PIC 9(02)  VALUE ZEROES.         
+           05  WK-MIL-ATUAL           PIC 9(02)  VALUE ZEROES.         
+                                                                       
+       01  WK-HORA-ATUAL-MASK.                                         
+           05  WK-HOR-MASK            PIC 9(02)  VALUE ZEROES.         
+           05  FILLER                 PIC X(01)  VALUE ':'.            
+           05  WK-MIN-MASK            PIC 9(02)  VALUE ZEROES.         
+           05  FILLER                 PIC X(01)  VALUE ':'.            
+           05  WK-SEG-MASK            PIC 9(02)  VALUE ZEROES.         
+           05  FILLER                 PIC X(01)  VALUE ':'.            
+           05  WK-MIL-MASK            PIC 9(02)  VALUE ZEROES.         
+      *                                                               *
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+           05  FILLER                 PIC X(17)  VALUE SPACES.         
+           05  FILLER                 PIC X(08)  VALUE                 
+               'PAGINA: '.                                             
+           05  CAB2-PAG               PIC X(03)  VALUE SPACES.         
+                                                                       
+       01  CAB3.                                                       
+           05  FILLER                 PIC X(01)  VALUE SPACES.         
+           05  FILLER                 PIC X(79)  VALUE ALL '-'.        
+                                                                       
+       01  CAB4.                                                       
+           05  FILLER                 PIC X(01)  VALUE SPACES.         
+           05  FILLER                 PIC X(79)  VALUE SPACES.         
+                                                                       
+       01  CAB5.                                                       
+           05  FILLER                 PIC X(01)  VALUE SPACES.         
+           05  FILLER                 PIC X(03)  VALUE                 
+               'CPF'.                                                  
+           05  FILLER                 PIC X(15)  VALUE SPACES.         
+           05  FILLER                 PIC X(04)  VALUE                 
+               'NOME'.                                                 
+           05  FILLER                 PIC X(41)  VALUE SPACES.   
+           05  FILLER                 PIC X(11)  VALUE           
+               'VALOR TOTAL'.                                    
+           05  FILLER                 PIC X(05)  VALUE SPACES.   
+                                                                 
+       01  DET.                                                  
+           05  FILLER                 PIC X(01)  VALUE SPACES.   
+           05  DET-CPF                PIC X(09)  VALUE SPACES.   
+           05  FILLER                 PIC X(01)  VALUE '-'.      
+           05  DET-CPF-DIG            PIC X(02)  VALUE SPACES.   
+           05  FILLER                 PIC X(06)  VALUE SPACES.   
+           05  DET-NOME               PIC X(30)  VALUE SPACES.   
+           05  FILLER                 PIC X(04)  VALUE SPACES.   
+           05  DET-VLR                PIC ZZZ.ZZZ.ZZZ.ZZZ.ZZ9,99 
+                                                 VALUE SPACES.   
+           05  FILLER                 PIC X(05)  VALUE SPACES.   
+                                                                 
+       01  TOT1.                                                 
+           05  FILLER                 PIC X(01)  VALUE SPACES.   
+           05  FILLER                 PIC X(27)  VALUE           
+               'TOTAL REGISTROS IMPRESSOS: '.                          
+           05  FILLER                 PIC X(09)  VALUE SPACES.         
+           05  TOT-REG                PIC Z.ZZZ.ZZZ.ZZZ                
+                                                 VALUE SPACES.         
+           05  FILLER                 PIC X(30)  VALUE SPACES.         
+                                                                       
+       01  TOT2.                                                       
+           05  FILLER                 PIC X(01)  VALUE SPACES.         
+           05  FILLER                 PIC X(27)  VALUE                 
+               'VALOR TOTAL SUMARIZADO...: '.                          
+           05  TOT-VLR                PIC ZZZ.ZZZ.ZZZ.ZZZ.ZZ9,99       
+                                                 VALUE SPACES.         
+           05  FILLER                 PIC X(30)  VALUE SPACES.         
+                                                                       
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+      *                VARIAVEIS QUEBRA                               *
+      *---------------------------------------------------------------*
+      *                                                               *
+       77  WK-CPF-ATU                      PIC 9(11) VALUE ZEROES.     
+       01  WK-CPF-ANT-ALL.                                             
+           05  WK-CPF-ANT                  PIC 9(09) VALUE ZEROES.     
+           05  WK-CPF-ANT-DIG              PIC 9(02) VALUE ZEROES.     
+       77  WK-VLR-ATU                      PIC 9(15)V99 VALUE ZEROES.  
+       77  WK-VLR-TOT                      PIC 9(15)V99 VALUE ZEROES.  
+       77  WK-NOME-ANT                     PIC X(30) VALUE ZEROES.     
+      *                                                               *
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+      *                VARIAVEIS RELATORIO                            *
+      *---------------------------------------------------------------*
+      *                                                               *
+       77  WK-TOT-REG-PAG             PIC 9(03)  VALUE 60.             
+       77  WK-TOT-VLR                 PIC 9(15)V99                     
+                                                 VALUE ZEROES.         
+       77  WK-TOT-PAG                 PIC 9(03)  VALUE ZEROES.         
+      *                                                               *
+      *---------------------------------------------------------------*
+                                                                       
+      *===============================================================*
+       PROCEDURE                                 DIVISION.             
+      *===============================================================*
+                                                                       
+      *---------------------------------------------------------------*
+       0000-PRINCIPAL                            SECTION.              
+      *---------------------------------------------------------------*
+      *                                                               *
+           PERFORM 1000-INICIO        THRU       1000-99-FIM.          
+           PERFORM 2000-PROCESSA      THRU       2000-99-FIM           
+                                      UNTIL      WK-FS-ARQENT          
+                                      EQUAL      '10'.                 
+           PERFORM 3000-FINALIZA      THRU       3000-99-FIM.          
+           STOP RUN.                                                   
+      *                                                               *
+      *---------------------------------------------------------------*
+       0000-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------* 
+       0100-DATA-HORA                            SECTION.               
+      *---------------------------------------------------------------* 
+      *                                                               * 
+           ACCEPT WK-DATA-ATUAL       FROM       DATE YYYYMMDD.         
+           ACCEPT WK-HORA-ATUAL       FROM       TIME.                  
+                                                                        
+           MOVE WK-ANO-ATUAL          TO         WK-ANO-MASK.           
+           MOVE WK-MES-ATUAL          TO         WK-MES-MASK.           
+           MOVE WK-DIA-ATUAL          TO         WK-DIA-MASK.           
+                                                                        
+           MOVE WK-HOR-ATUAL          TO         WK-HOR-MASK.           
+           MOVE WK-MIN-ATUAL          TO         WK-MIN-MASK.           
+           MOVE WK-SEG-ATUAL          TO         WK-SEG-MASK.           
+           MOVE WK-MIL-ATUAL          TO         WK-MIL-MASK.           
+                                                                        
+           DISPLAY '*   DATA: ' WK-DATA-ATUAL-MASK                      
+                   '    HORA: ' WK-HORA-ATUAL-MASK          '        *'.
+           DISPLAY '**************************************************'.
+           DISPLAY '                                                  '.
+      *                                                               *
+      *---------------------------------------------------------------*
+       0100-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       0200-READ-ARQENT                          SECTION.              
+      *---------------------------------------------------------------*
+      *                                                               *
+           MOVE '0200-READ-ARQENT'    TO         WK-CODIGO-AREA.       
+                                                                       
+           READ ARQENT.                                                
+           IF WK-FS-ARQENT            NOT EQUAL  '00' AND '10'         
+              DISPLAY 'ERRO NO: '                WK-CODIGO-AREA        
+              DISPLAY 'STATUS:  '                WK-FS-ARQENT          
+              MOVE WK-FS-ARQENT       TO         WK-AREA-STAT          
+              MOVE 'ERRO NA LEITURA DO ARQUIVO DE ENTRADA ARQENT'      
+                                      TO         WK-AREA-MSG           
+              CALL WK-ABENDA          USING      WK-AREA               
+           END-IF.                                                     
+                                                                       
+           IF WK-FS-ARQENT            EQUAL      '00'                  
+              ADD 1                   TO         WK-QTD-READS          
+                                                                       
+              MOVE ENT-CPF            TO         WK-CPF-ATU            
+              MOVE ENT-VALOR-GASTO    TO         WK-VLR-ATU            
+              MOVE ENT-NOME-CLIENTE   TO         WK-NOME-ANT           
+           END-IF.                                                     
+      *                                                               *
+      *---------------------------------------------------------------*
+       0200-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       0800-WRITE-ARQSAI                        SECTION.               
+      *---------------------------------------------------------------*
+      *                                                               *
+           MOVE WK-CPF-ANT-ALL        TO         SAI-CPF.              
+           MOVE WK-NOME-ANT           TO         SAI-NOME-CLIENTE.     
+           MOVE WK-VLR-TOT            TO         SAI-VALOR-GASTO.      
+                                                                       
+           MOVE '0800-WRITE-ARQSAI'   TO         WK-CODIGO-AREA.       
+                                                                       
+           WRITE REG-SAI.                                              
+           IF WK-FS-ARQSAI            NOT EQUAL  '00'                  
+              DISPLAY 'ERRO NO: '                WK-CODIGO-AREA        
+              DISPLAY 'STATUS:  '                WK-FS-ARQSAI          
+              MOVE WK-FS-ARQSAI       TO         WK-AREA-STAT          
+              MOVE 'ERRO DA GRAVAÇÃO NO ARQUIVO DE SAIDA ARQSAI'       
+                                      TO         WK-AREA-MSG           
+              CALL WK-ABENDA          USING      WK-AREA               
+           END-IF.                                                     
+                                                                       
+           ADD 1                      TO         WK-QTD-ARQSAI.        
+      *                                                               *
+      *---------------------------------------------------------------*
+       0800-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       0900-WRITE-RELATO                        SECTION.               
+      *---------------------------------------------------------------*
+      *                                                               *
+           MOVE '0900-WRITE-RELATO'   TO         WK-CODIGO-AREA.       
+                                                                       
+           WRITE RELATO-LRECL.                                         
+           IF WK-FS-RELATO            NOT EQUAL  '00'                  
+              DISPLAY 'ERRO NO: '                WK-CODIGO-AREA        
+              DISPLAY 'STATUS:  '                WK-FS-RELATO          
+              MOVE WK-FS-RELATO       TO         WK-AREA-STAT          
+              MOVE 'ERRO DA GRAVAÇÃO NO ARQUIVO DE SAIDA RELATO'       
+                                      TO         WK-AREA-MSG           
+              CALL WK-ABENDA          USING      WK-AREA               
+           END-IF.                                                     
+      *                                                               *
+      *---------------------------------------------------------------*
+       0900-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+      *---------------------------------------------------------------* 
+       1000-INICIO                               SECTION.               
+      *---------------------------------------------------------------* 
+           DISPLAY '**************************************************'.
+           DISPLAY '*          INICIANDO O PROGRAMA VRB673S          *'.
+           DISPLAY '**************************************************'.
+      *---------------------------------------------------------------* 
+      *                                                               * 
+                                                                        
+           PERFORM 0100-DATA-HORA     THRU       0100-99-FIM.           
+                                                                        
+           PERFORM 1100-OPEN-ARQS     THRU       1100-99-FIM.           
+                                                                        
+           PERFORM 0200-READ-ARQENT   THRU       0200-99-FIM.           
+                                                                        
+           IF WK-FS-ARQENT EQUAL '10'                                   
+              DISPLAY                                                   
+                   '*------------------------------------------------*' 
+              DISPLAY                                                   
+                   '*           ARQENT ESTA VAZIO                    *' 
+              DISPLAY                                                  
+                   '*------------------------------------------------*'
+              DISPLAY ' '                                              
+                                                                       
+              ADD 1                   TO         WK-ARQENT-VAZIO       
+           ELSE                                                        
+                                                                       
+              MOVE WK-CPF-ATU         TO         WK-CPF-ANT-ALL        
+                                                                       
+           END-IF.                                                     
+      *                                                               *
+      *---------------------------------------------------------------*
+       1000-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       1100-OPEN-ARQS                            SECTION.              
+      *---------------------------------------------------------------*
+      *                                                               *
+           MOVE '1100-OPEN-ARQS'      TO         WK-CODIGO-AREA.       
+                                                                      
+           OPEN INPUT  ARQENT.                                        
+           IF WK-FS-ARQENT            NOT EQUAL  '00'                 
+              DISPLAY 'ERRO NO: '                WK-CODIGO-AREA       
+              DISPLAY 'STATUS:  '                WK-FS-ARQENT         
+              MOVE WK-FS-ARQENT       TO         WK-AREA-STAT         
+              MOVE 'ERRO NA ABERTURA DO ARQUIVO DE ENTRADA ARQENT'    
+                                      TO         WK-AREA-MSG          
+              CALL WK-ABENDA          USING      WK-AREA              
+           END-IF.                                                    
+                                                                      
+           OPEN OUTPUT ARQSAI.                                        
+           IF WK-FS-ARQSAI            NOT EQUAL '00'                  
+              DISPLAY 'ERRO NO: '                WK-CODIGO-AREA       
+              DISPLAY 'STATUS:  '                WK-FS-ARQSAI         
+              MOVE WK-FS-ARQSAI       TO         WK-AREA-STAT         
+              MOVE 'ERRO NA ABERTURA DO ARQUIVO DE SAIDA ARQSAI'      
+                                      TO         WK-AREA-MSG          
+              CALL WK-ABENDA          USING      WK-AREA              
+           END-IF.                                                    
+                                                                       
+           OPEN OUTPUT RELATO.                                         
+           IF WK-FS-RELATO            NOT EQUAL '00'                   
+              DISPLAY 'ERRO NO: '                WK-CODIGO-AREA        
+              DISPLAY 'STATUS:  '                WK-FS-RELATO          
+              MOVE WK-FS-RELATO       TO         WK-AREA-STAT          
+              MOVE 'ERRO NA ABERTURA DO ARQUIVO DE SAIDA RELATO'       
+                                      TO         WK-AREA-MSG           
+              CALL WK-ABENDA          USING      WK-AREA               
+           END-IF.                                                     
+      *                                                               *
+      *---------------------------------------------------------------*
+       1100-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       2000-PROCESSA                             SECTION.              
+      *---------------------------------------------------------------*
+      *                                                              * 
+           PERFORM 2800-QUEBRA        THRU       2800-99-FIM.          
+
+           PERFORM 0200-READ-ARQENT   THRU        0200-99-FIM.         
+      *                                                               *
+      *---------------------------------------------------------------*
+       2000-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       2800-QUEBRA                               SECTION.              
+      *---------------------------------------------------------------*
+      *                                                               *
+           IF WK-CPF-ATU NOT EQUAL WK-CPF-ANT-ALL                      
+              PERFORM 0800-WRITE-ARQSAI                                
+                                      THRU        0800-99-FIM          
+              PERFORM 2900-RELATORIO                                   
+                                      THRU        2900-99-FIM          
+                                                                       
+              MOVE WK-CPF-ATU         TO          WK-CPF-ANT-ALL       
+              MOVE ZEROES             TO          WK-VLR-TOT           
+           END-IF.                                                     
+                                                                       
+           COMPUTE WK-VLR-TOT = WK-VLR-TOT + WK-VLR-ATU.               
+      *                                                               *
+      *---------------------------------------------------------------*
+       2800-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       2900-RELATORIO                            SECTION.              
+      *---------------------------------------------------------------*
+      *                                                               *
+           IF WK-TOT-REG-PAG = 60                                      
+              MOVE 6                  TO         WK-TOT-REG-PAG        
+              PERFORM 2910-CABECALHO  THRU       2910-99-FIM           
+           END-IF.                                                     
+                                                                       
+           PERFORM 2920-GRAVA-DET     THRU       2920-99-FIM.          
+      *                                                               *
+      *---------------------------------------------------------------*
+       2900-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       2910-CABECALHO                            SECTION.              
+      *---------------------------------------------------------------*
+      *                                                               *
+           IF WK-TOT-PAG NOT EQUAL 1                                   
+              MOVE SPACES             TO         RELATO-LRECL          
+              PERFORM 0900-WRITE-RELATO                                
+                                      THRU       0900-99-FIM           
+           END-IF.                                                     
+                                                                       
+           MOVE WK-DATA-ATUAL-MASK    TO         CAB1-DATA.            
+           MOVE CAB1                  TO         RELATO-LRECL.         
+           PERFORM 0900-WRITE-RELATO  THRU       0900-99-FIM.          
+                                                                       
+           ADD 1                      TO         WK-TOT-PAG.           
+           MOVE WK-TOT-PAG            TO         CAB2-PAG.             
+           MOVE CAB2                  TO         RELATO-LRECL.         
+           PERFORM 0900-WRITE-RELATO  THRU       0900-99-FIM.          
+                                                                       
+           MOVE CAB3                  TO         RELATO-LRECL.         
+           PERFORM 0900-WRITE-RELATO  THRU       0900-99-FIM.          
+                                                                       
+           MOVE CAB4                  TO         RELATO-LRECL.         
+           PERFORM 0900-WRITE-RELATO  THRU       0900-99-FIM.          
+                                                                       
+           MOVE CAB5                  TO         RELATO-LRECL.         
+           PERFORM 0900-WRITE-RELATO  THRU       0900-99-FIM.          
+      *                                                               *
+      *---------------------------------------------------------------*
+       2910-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       2920-GRAVA-DET                            SECTION.              
+      *---------------------------------------------------------------*
+      *                                                               *
+                                                                       
+           MOVE WK-CPF-ANT            TO         DET-CPF.              
+           MOVE WK-CPF-ANT-DIG        TO         DET-CPF-DIG.          
+           MOVE WK-NOME-ANT           TO         DET-NOME.             
+           MOVE WK-VLR-TOT            TO         DET-VLR.              
+                                                                       
+           COMPUTE WK-TOT-VLR = WK-TOT-VLR + WK-VLR-TOT.               
+                                                                       
+           MOVE DET                   TO         RELATO-LRECL.         
+           PERFORM 0900-WRITE-RELATO  THRU       0900-99-FIM.          
+                                                                       
+           ADD 1                      TO         WK-TOT-REG-PAG.       
+           ADD 1                      TO         WK-QTD-REGISTROS.     
+      *                                                               *
+      *---------------------------------------------------------------*
+       2920-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       3000-FINALIZA                             SECTION.              
+      *---------------------------------------------------------------*
+      *                                                               *
+           IF WK-QTD-READS NOT EQUAL 0                                 
+                                                                       
+              PERFORM 0800-WRITE-ARQSAI                                
+                                      THRU       0800-99-FIM           
+              PERFORM 2900-RELATORIO                                   
+                                      THRU       2900-99-FIM           
+           END-IF.                                                     
+                                                                       
+           PERFORM 3700-FIM-RELATORIO THRU       3700-99-FIM.          
+           PERFORM 3800-CLOSE-ARQS    THRU       3800-99-FIM.          
+           PERFORM 3900-DISPLAY-FIM   THRU       3900-99-FIM.          
+           PERFORM 0100-DATA-HORA     THRU       0100-99-FIM.          
+      *                                                               *
+      *---------------------------------------------------------------*
+       3000-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       3700-FIM-RELATORIO                        SECTION.              
+      *---------------------------------------------------------------*
+      *                                                               *
+           MOVE WK-QTD-REGISTROS      TO         TOT-REG.              
+           MOVE WK-TOT-VLR            TO         TOT-VLR.              
+                                                                       
+           IF WK-TOT-REG-PAG > 57                                      
+              PERFORM 2910-CABECALHO  THRU       2910-99-FIM           
+           END-IF.                                                     
+                                                                       
+           MOVE SPACES                TO         RELATO-LRECL.         
+           PERFORM 0900-WRITE-RELATO  THRU       0900-99-FIM.          
+                                                                       
+           MOVE TOT1                  TO         RELATO-LRECL.         
+           PERFORM 0900-WRITE-RELATO  THRU       0900-99-FIM.          
+                                                                       
+           MOVE TOT2                  TO         RELATO-LRECL.         
+           PERFORM 0900-WRITE-RELATO  THRU       0900-99-FIM.          
+      *                                                               *
+      *---------------------------------------------------------------*
+       3700-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+      *---------------------------------------------------------------*
+       3800-CLOSE-ARQS                           SECTION.              
+      *---------------------------------------------------------------*
+      *                                                               *
+           MOVE '3800-CLOSE-ARQS'     TO         WK-CODIGO-AREA.       
+                                                                       
+           CLOSE ARQENT.                                               
+           IF WK-FS-ARQENT            NOT EQUAL  '00'                  
+              DISPLAY 'ERRO NO: '                WK-CODIGO-AREA        
+              DISPLAY 'STATUS:  '                WK-FS-ARQENT          
+              MOVE WK-FS-ARQENT       TO         WK-AREA-STAT          
+              MOVE 'ERRO NO FECHAMENTO DO ARQUIVO DE ENTRADA ARQENT'   
+                                      TO         WK-AREA-MSG           
+              CALL WK-ABENDA          USING      WK-AREA               
+           END-IF.                                                     
+                                                                       
+           CLOSE ARQSAI.                                               
+           IF WK-FS-ARQSAI            NOT EQUAL  '00'                  
+              DISPLAY 'ERRO NO: '                WK-CODIGO-AREA        
+              DISPLAY 'STATUS:  '                WK-FS-ARQSAI          
+              MOVE WK-FS-ARQSAI       TO         WK-AREA-STAT          
+              MOVE 'ERRO NO FECHAMENTO DO ARQUIVO DE SAIDA ARQSAI'     
+                                      TO         WK-AREA-MSG           
+              CALL WK-ABENDA          USING      WK-AREA               
+           END-IF.                                                     
+                                                                       
+           CLOSE RELATO.                                               
+           IF WK-FS-RELATO            NOT EQUAL  '00'                  
+              DISPLAY 'ERRO NO: '                WK-CODIGO-AREA        
+              DISPLAY 'STATUS:  '                WK-FS-RELATO          
+              MOVE WK-FS-RELATO       TO         WK-AREA-STAT          
+              MOVE 'ERRO NO FECHAMENTO DO ARQUIVO DE SAIDA RELATO'     
+                                      TO         WK-AREA-MSG           
+              CALL WK-ABENDA          USING      WK-AREA               
+           END-IF.                                                     
+      *                                                               *
+      *---------------------------------------------------------------*
+       3800-99-FIM.                              EXIT.                 
+      *---------------------------------------------------------------*
+                                                                       
+      *---------------------------------------------------------------*
+       3900-DISPLAY-FIM                          SECTION.               
+      *---------------------------------------------------------------* 
+      *                                                               * 
+           DISPLAY '**************************************************'.
+           DISPLAY '*           TOTALIZADOR PROGRAMA VRB671          *'.
+           DISPLAY '*------------------------------------------------*'.
+           DISPLAY '*  REGISTROS LIDOS ARQENT............: '            
+                   WK-QTD-READS     '*'                                 
+           DISPLAY '*  REGISTROS GRAVADOS ARQSAI.........: '            
+                   WK-QTD-ARQSAI    '*'.                                
+           DISPLAY '*  REGISTROS GRAVADOS RELATO.........: '            
+                   WK-QTD-REGISTROS '*'.                                
+           DISPLAY '*                                                *'.
+      *                                                               * 
+      *---------------------------------------------------------------* 
+       3900-99-FIM.                              EXIT.                  
+      *---------------------------------------------------------------* 
