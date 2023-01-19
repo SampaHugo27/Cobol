@@ -164,7 +164,7 @@
             PERFORM 1200-FIRST-READ         THRU 1200-99-FIM.           
        *                                                               *
        *---------------------------------------------------------------*
-       * MOVE MÊS ATUAL TO WK-MES-ATUAL                                *
+       * MOVE MÃŠS ATUAL TO WK-MES-ATUAL                                *
             ACCEPT WK-DATA-ATUAL       FROM       DATE YYYYMMDD.        
        *                                                                
        *---------------------------------------------------------------*
