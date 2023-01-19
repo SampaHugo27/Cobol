@@ -90,7 +90,7 @@
         77 WS-CT-PAG                        PIC 999      VALUE ZEROS.
 		                                                                      
        *---------------------------------------------------------------*
-       *         LAYOUT DO RELATORIO - AREA DE CABEÇALHOS              *
+       *         LAYOUT DO RELATORIO - AREA DE CABEÃ‡ALHOS              *
        *---------------------------------------------------------------*
         01 CAB-01.                                                      
            05 FILLER        PIC X(29) VALUE SPACES.                     
