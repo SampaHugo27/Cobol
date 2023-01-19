@@ -1,0 +1,597 @@
+       *-----------------------------------------------------------------
+        IDENTIFICATION                     DIVISION.                     
+        PROGRAM-ID.  VRB642S.                                            
+        AUTHOR.      HUGO DA SILVA SAMPAIO.                                           
+       *-----------------------------------------------------------------
+        ENVIRONMENT                        DIVISION.                     
+       *-----------------------------------------------------------------
+        CONFIGURATION                      SECTION.                      
+       *SOURCE                                                           
+       *OBJECT                                                           
+        SPECIAL-NAMES.                     DECIMAL-POINT IS COMMA.       
+       *-----------------------------------------------------------------
+        INPUT-OUTPUT                       SECTION.                      
+       *-----------------------------------------------------------------
+        FILE-CONTROL.                                                    
+       *                                                                 
+              SELECT ARQENT ASSIGN TO ARQENT                             
+	      FILE STATUS IS WK-FS-ARQENT.                               
+       *                                                                 
+              SELECT ARQSAI ASSIGN TO ARQSAI                             
+              FILE STATUS IS WK-FS-ARQSAI.                               
+       *                                                                 
+              SELECT RELATO ASSIGN TO RELATO                             
+              FILE STATUS IS WK-FS-RELATO.                               
+       *-----------------------------------------------------------------
+        DATA                               DIVISION.                     
+       *-----------------------------------------------------------------
+        FILE                               SECTION.                      
+       *-----------------------------------------------------------------
+        FD ARQENT                  RECORDING MODE F.                     
+        01 ENTRADA.                                                      
+           05 CPF-E                        PIC X(11).                    
+           05 NOME-CLIENTE-E               PIC X(30).                    
+           05 VALOR-GASTO                  PIC 9(15)V99.                 
+           05 DATA-COMPRA-E                PIC 9(08).
+		         05 FILLER                       PIC X(04).                    
+       *                                                                 
+        FD ARQSAI                  RECORDING MODE F.                     
+        01 SAIDA.                                                        
+           05 CPF-S                        PIC X(11).                    
+           05 NOME-CLIENTE-S               PIC X(30).                    
+           05 VALOR-TOTAL                  PIC 9(15)V99.                 
+           05 DATA-COMPRA-S                PIC 9(08).                    
+           05 FILLER                       PIC X(04).                    
+       *                                                                 
+        FD RELATO                  RECORDING MODE F.                     
+        01 REL-LINHA.                                                    
+           05 LINHA                        PIC X(80).                    
+       *-----------------------------------------------------------------
+        WORKING-STORAGE                    SECTION.                      
+       *-----------------------------------------------------------------
+        77 WK-FS-ARQENT                    PIC X(02)     VALUE SPACES.   
+        77 WK-FS-ARQSAI                    PIC X(02)     VALUE SPACES.
+	77 WK-FS-RELATO                    PIC X(02)     VALUE SPACES.
+       *                                                             
+        77 WK-TOT-SUM                      PIC 9(15)V99  VALUE ZEROS.
+        77 WK-TOT-REG                      PIC 9(10)     VALUE ZEROS.
+        77 WK-VALOR-TOTAL                  PIC 9(15)V99  VALUE ZEROS.
+       *                                                             
+        77 WK-QUEBRA-ANT                   PIC 9(11)     VALUE ZEROS.
+        77 WK-QUEBRA-ATU                   PIC 9(11)     VALUE ZEROS.
+        77 WK-DATA                         PIC 9(08)     VALUE ZEROS.
+        77 WK-CPF                          PIC 9(11)     VALUE ZEROS.
+       *                                                             
+        77 WK-CONT-LINHA                   PIC 9(02)     VALUE 99.   
+        77 WK-CONT-PAG                     PIC 9(02)     VALUE ZEROS.
+        77 WK-CONT-CPF                     PIC 9(04)     VALUE ZEROS.
+       *                                                             
+        77 WK-CONT-LEITURA                 PIC 9(04)     VALUE ZEROS.
+        77 WK-CONT-GRAVADO                 PIC 9(04)     VALUE ZEROS.
+        77 WK-CONT-QUEBRA                  PIC 9(04)     VALUE ZEROS.
+       *                                                                 
+       ******************************************************************
+       ************************* AREA - OCCURS **************************
+       ******************************************************************
+        77 WK-FLAG-CPF                     PIC X(01)     VALUE SPACES.   
+        77 WK-IND                          PIC 9(04)     VALUE ZEROS.    
+        77 WK-FLAG-DTVLR                   PIC X(01)     VALUE SPACES.   
+        77 WK-IND2                         PIC 9(04)     VALUE ZEROS.    
+                                                                         
+        01 WK-TABELA-CPF.                                                
+           03 WK-TAB-CPF                   OCCURS 40     TIMES.          
+              05 WK-TB-CPF11               PIC 9(11)     VALUE ZEROS.    
+              05 WK-TB-DTVLR               OCCURS 20     TIMES.          
+                 07 WK-TB-DT               PIC 9(08)     VALUE ZEROS.    
+                 07 WK-TB-VLR              PIC 9(15)V99  VALUE ZEROS.    
+       ******************************************************************
+       ************************* AREA - ABEND  **************************
+       ******************************************************************
+	77 WK-ABENDA                       PIC X(08)  VALUE 'ABENDA31'.  
+        01 WK-AREA.                                                      
+           05 WK-AREA-PGM                  PIC X(08)  VALUE 'VRB642S'.   
+           05 WK-AREA-STAT                 PIC X(03)  VALUE SPACES.      
+           05 WK-AREA-MSG                  PIC X(50)  VALUE SPACES.      
+                                                                         
+        01 WK-AREA-COD                     PIC X(30)  VALUE SPACES.      
+       ******************************************************************
+       *********************** AREA - CABECALHO *************************
+       ******************************************************************
+       *-----------------------------------------------------------------
+        01 CAB-01.                                                       
+           05 FILLER                       PIC X(29)  VALUE SPACES.      
+           05 FILLER                       PIC X(16)                     
+                                             VALUE 'BRADESCO CARTOES'.   
+           05 FILLER                       PIC X(19)  VALUE SPACES.      
+           05 FILLER                       PIC X(06)  VALUE 'DATA: '.    
+           05 CAB1-DIA                     PIC 9(02)  VALUE ZEROS. 
+	   05 FILLER                       PIC X(01)  VALUE '/'.         
+           05 CAB1-MES                     PIC 9(02)  VALUE ZEROS.       
+           05 FILLER                       PIC X(01)  VALUE '/'.         
+           05 CAB1-ANO                     PIC 9(04)  VALUE ZEROS.       
+       *-----------------------------------------------------------------
+        01 CAB-02.                                                       
+           05 FILLER                       PIC X(01)  VALUE SPACES.      
+           05 FILLER                       PIC X(08)  VALUE 'VRB642S'.   
+           05 FILLER                       PIC X(12)  VALUE SPACES.      
+           05 FILLER                       PIC X(31)                     
+                                 VALUE 'RELATORIO TOTALIZADOR DE GASTOS'.
+           05 FILLER                       PIC X(17)  VALUE SPACES.      
+           05 FILLER                       PIC X(08)  VALUE 'PAGINA: '.  
+           05 CAB2-PAG                     PIC 9(03)  VALUE ZEROS.       
+       *-----------------------------------------------------------------
+        01 CAB-03.                                                       
+           05 FILLER                       PIC X(80)  VALUE ALL '-'.     
+       *-----------------------------------------------------------------
+	01 CAB-04.                                                       
+           05 FILLER                       PIC X(01)  VALUE SPACES.      
+           05 FILLER                       PIC X(03)  VALUE 'CPF'.       
+           05 FILLER                       PIC X(15)  VALUE SPACES.      
+           05 FILLER                       PIC X(04)  VALUE 'NOME'.      
+           05 FILLER                       PIC X(41)  VALUE SPACES.      
+           05 FILLER                       PIC X(11)                     
+                                           VALUE 'VALOR TOTAL'.          
+       ******************************************************************
+       *********************** AREA - DETALHE ***************************
+       ******************************************************************
+       *-----------------------------------------------------------------
+        01 DETALHE.                                                      
+           05 FILLER                       PIC X(01)  VALUE SPACES.      
+           05 DET-CPF9                     PIC 9(09)  VALUE ZEROS.       
+           05 FILLER                       PIC X(01)  VALUE '-'.         
+           05 DET-CPF2                     PIC 9(02)  VALUE ZEROS.       
+           05 FILLER                       PIC X(06)  VALUE SPACES.
+	   05 DET-NOME                     PIC X(30)  VALUE SPACES.      
+           05 FILLER                       PIC X(04)  VALUE SPACES.      
+           05 DET-VALOR                    PIC ZZZ.ZZZ.ZZZ.ZZZ.ZZZ,99    
+                                           VALUE ZEROS.                  
+       *-----------------------------------------------------------------
+       ******************************************************************
+       *********************** AREA - TOTALIZADOR ***********************
+       ******************************************************************
+       *-----------------------------------------------------------------
+        01 TOTCLI.                                                       
+           05 FILLER                       PIC X(01)  VALUE SPACES.      
+           05 FILLER                       PIC X(31)                     
+                                 VALUE 'VALOR TOTAL GASTO PELO CLIENTE '.
+           05 TOTCLICP9                    PIC 9(09)  VALUE ZEROS.       
+           05 FILLER                       PIC X(01)  VALUE '-'.         
+           05 TOTCLICP2                    PIC 9(02)  VALUE ZEROS.       
+       *-----------------------------------------------------------------
+        01 TOTDATA.
+	   05 FILLER                       PIC X(07)  VALUE SPACES.      
+           05 FILLER                       PIC X(04)  VALUE 'DIA '.      
+           05 TOTDIA                       PIC 9(02)  VALUE ZEROS.       
+           05 FILLER                       PIC X(01)  VALUE '/'.         
+           05 TOTMES                       PIC 9(02)  VALUE ZEROS.       
+           05 FILLER                       PIC X(01)  VALUE '/'.         
+           05 TOTANO                       PIC 9(04)  VALUE ZEROS.       
+           05 FILLER                       PIC X(28)                     
+                                 VALUE '...........................:'.   
+           05 FILLER                       PIC X(04)  VALUE SPACES.      
+           05 TOTVLR                       PIC ZZZ.ZZZ.ZZZ.ZZZ.ZZ9,99    
+                                                      VALUE ZEROS.       
+       *-----------------------------------------------------------------
+        01 TOT1.                                                         
+           05 FILLER                       PIC X(01)  VALUE SPACES.      
+           05 FILLER                       PIC X(27)                     
+                                     VALUE 'TOTAL REGISTROS IMPRESSOS: '.
+           05 FILLER                       PIC X(09)  VALUE SPACES.
+	   05 TOT1-VALOR-REG               PIC Z.ZZZ.ZZZ.ZZ9             
+                                                      VALUE ZEROS.       
+       *-----------------------------------------------------------------
+        01 TOT2.                                                         
+           05 FILLER                       PIC X(01)  VALUE SPACES.      
+           05 FILLER                       PIC X(27)                     
+                                     VALUE 'VALOR TOTAL SUMARIZADO...: '.
+           05 TOT2-VALOR-SUM               PIC ZZZ.ZZZ.ZZZ.ZZZ.ZZ9,99    
+                                           VALUE ZEROS.                  
+       *-----------------------------------------------------------------
+       ******************************************************************
+       ******************** FIM DA WORKING-STORAGE **********************
+       ******************************************************************
+       *-----------------------------------------------------------------
+        PROCEDURE                          DIVISION.                     
+       *-----------------------------------------------------------------
+        0000-PRINCIPAL                     SECTION.                      
+       *-----------------------------------------------------------------
+       *                                                                 
+            DISPLAY '**********************************************'     
+            DISPLAY '****************INICIANDO PGM.****************'     
+            DISPLAY '**********************************************'     
+            DISPLAY '                                              '     
+       *                                                                 
+            PERFORM 1000-INICIO.                                         
+            PERFORM 2000-PROCESSA UNTIL WK-FS-ARQENT EQUAL '10'          
+            PERFORM 9000-TERMINO.                                        
+       *                                                                 
+            STOP RUN.                                                    
+       *                                                                 
+        0000-PRINCIPAL-FIM.        EXIT.                                 
+       *-----------------------------------------------------------------
+        1000-INICIO                        SECTION.                      
+       *-----------------------------------------------------------------
+            MOVE '1000-INICIO'      TO    WK-AREA-COD
+       	    OPEN INPUT    ARQENT.                      
+            IF WK-FS-ARQENT   NOT EQUAL '00'           
+               DISPLAY 'ERRO NO: '        WK-AREA-COD  
+               DISPLAY 'STATUS:  '        WK-FS-ARQENT 
+               MOVE WK-FS-ARQENT    TO    WK-AREA-STAT 
+               MOVE 'ERRO AO ABRIR ARQUIVO ENTRADA'    
+                                    TO    WK-AREA-MSG  
+               CALL WK-ABENDA       USING WK-AREA      
+            END-IF.                                    
+       *                                               
+            OPEN OUTPUT   ARQSAI.                      
+            IF WK-FS-ARQSAI   NOT EQUAL '00'           
+               DISPLAY 'ERRO NO: '        WK-AREA-COD  
+               DISPLAY 'STATUS:  '        WK-FS-ARQSAI 
+               MOVE WK-FS-ARQSAI    TO    WK-AREA-STAT 
+               MOVE 'ERRO AO ABRIR ARQUIVO SAIDA'      
+                                    TO    WK-AREA-MSG  
+               CALL WK-ABENDA       USING WK-AREA
+	    END-IF.                                         
+       *                                                    
+            OPEN OUTPUT   RELATO.                           
+            IF WK-FS-RELATO   NOT EQUAL '00'                
+               DISPLAY 'ERRO NO: '        WK-AREA-COD       
+               DISPLAY 'STATUS:  '        WK-FS-RELATO      
+               MOVE WK-FS-RELATO    TO    WK-AREA-STAT      
+               MOVE 'ERRO AO ABRIR RELATORIO'               
+                                    TO    WK-AREA-MSG       
+               CALL WK-ABENDA       USING WK-AREA           
+            END-IF.                                         
+       *                                                    
+            PERFORM 2250-LEITURA                            
+                                                            
+            IF  WK-FS-ARQENT      EQUAL '10'                
+               DISPLAY 'ARQUIVO ENTRADA VAZIO'              
+               PERFORM 1500-CABECALHO                       
+               MOVE ' ARQUIVO DE ENTRADA VAZIO' TO REL-LINHA
+	       WRITE REL-LINHA                                           
+               PERFORM 3000-FS-GRAVADET                                  
+               GO TO 1000-INICIO-FIM                                     
+            END-IF.                                                      
+                                                                         
+            MOVE  CPF-E             TO    WK-QUEBRA-ATU.                 
+            MOVE  CPF-E             TO    WK-QUEBRA-ANT.                 
+       *                                                                 
+            MOVE  CPF-E             TO    CPF-S.                         
+            MOVE  NOME-CLIENTE-E    TO    NOME-CLIENTE-S.                
+            MOVE  DATA-COMPRA-E     TO    DATA-COMPRA-S                  
+       *                                                                 
+            MOVE  CPF-E(1:9)        TO    DET-CPF9                       
+            MOVE  CPF-E(10:2)       TO    DET-CPF2                       
+            MOVE  NOME-CLIENTE-E    TO    DET-NOME.                      
+       *                                                                 
+        1000-INICIO-FIM.           EXIT.                                 
+       *-----------------------------------------------------------------
+        1500-CABECALHO                     SECTION.     
+       *-----------------------------------------------------------------
+            ADD   1                 TO    WK-CONT-PAG   
+            MOVE  WK-CONT-PAG       TO    CAB2-PAG      
+       *                                                
+            IF WK-CONT-PAG > 1                          
+               MOVE SPACES TO REL-LINHA                 
+               WRITE REL-LINHA                          
+               PERFORM 3000-FS-GRAVADET                 
+            END-IF.                                     
+       *                                                
+            MOVE FUNCTION CURRENT-DATE(1:4) TO CAB1-ANO 
+            MOVE FUNCTION CURRENT-DATE(5:2) TO CAB1-MES 
+            MOVE FUNCTION CURRENT-DATE(7:2) TO CAB1-DIA.
+       *                                                
+            WRITE REL-LINHA         FROM  CAB-01        
+            PERFORM 3000-FS-GRAVADET                    
+            WRITE REL-LINHA         FROM  CAB-02
+	    PERFORM 3000-FS-GRAVADET                                     
+            WRITE REL-LINHA         FROM  CAB-03                         
+            PERFORM 3000-FS-GRAVADET                                     
+            MOVE  SPACES            TO    REL-LINHA                      
+            WRITE REL-LINHA                                              
+            PERFORM 3000-FS-GRAVADET                                     
+            IF WK-FS-ARQENT       EQUAL '10'                             
+            OR WK-QUEBRA-ATU  NOT EQUAL  WK-QUEBRA-ANT                   
+               NEXT SENTENCE                                             
+            ELSE                                                         
+               WRITE REL-LINHA      FROM  CAB-04                         
+               PERFORM 3000-FS-GRAVADET                                  
+            END-IF.                                                      
+            MOVE  5                 TO    WK-CONT-LINHA.                 
+       *                                                                 
+        1500-CABECALHO-FIM.        EXIT.                                 
+       *-----------------------------------------------------------------
+        2000-PROCESSA                      SECTION.
+       *-----------------------------------------------------------------
+            IF WK-QUEBRA-ATU  NOT EQUAL  WK-QUEBRA-ANT                   
+               PERFORM 2500-GRAVACAO                                     
+                                                                         
+               MOVE CPF-E(1:9)      TO    DET-CPF9                       
+               MOVE CPF-E(10:2)     TO    DET-CPF2                       
+               MOVE NOME-CLIENTE-E  TO    DET-NOME                       
+       *                                                                 
+               MOVE  CPF-E          TO    CPF-S                          
+               MOVE  NOME-CLIENTE-E TO    NOME-CLIENTE-S                 
+               MOVE  DATA-COMPRA-E  TO    DATA-COMPRA-S                  
+               MOVE  0              TO    VALOR-TOTAL                    
+               MOVE  WK-QUEBRA-ATU  TO    WK-QUEBRA-ANT                  
+       *                                                                 
+               ADD  1               TO    WK-CONT-QUEBRA                 
+            END-IF.                                                      
+       *                                                                 
+            PERFORM 2750-CARREGA-TAB
+	    PERFORM 3500-GRAVA-DETALHE                                   
+            ADD   VALOR-GASTO       TO    VALOR-TOTAL                    
+            MOVE  DATA-COMPRA-E     TO    DATA-COMPRA-S                  
+            ADD   VALOR-GASTO       TO    WK-TOT-SUM                     
+       *                                                                 
+            PERFORM 2250-LEITURA.                                        
+       *                                                                 
+        2000-PROCESSA-FIM.         EXIT.                                 
+       *-----------------------------------------------------------------
+        2250-LEITURA                       SECTION.                      
+       *-----------------------------------------------------------------
+            MOVE '2250-LEITURA'     TO    WK-AREA-COD                    
+            READ          ARQENT.                                        
+                                                                         
+            IF  WK-FS-ARQENT  NOT EQUAL '00'                             
+            AND WK-FS-ARQENT  NOT EQUAL '10'                             
+               DISPLAY 'ERRO NO: '        WK-AREA-COD                    
+               DISPLAY 'STATUS:  '        WK-FS-ARQENT
+	       MOVE WK-FS-ARQENT    TO    WK-AREA-STAT                   
+               MOVE 'ERRO AO LER ARQUIVO ENTRADA'                        
+                                    TO    WK-AREA-MSG                    
+               CALL WK-ABENDA       USING WK-AREA                        
+            ELSE                                                         
+               IF WK-FS-ARQENT    EQUAL '10'                             
+                  GO TO 2250-LEITURA-FIM                                 
+               END-IF                                                    
+            END-IF.                                                      
+       *                                                                 
+            ADD   1                 TO    WK-CONT-LEITURA.               
+            MOVE  CPF-E             TO    WK-QUEBRA-ATU.                 
+       *                                                                 
+        2250-LEITURA-FIM.          EXIT.                                 
+       *-----------------------------------------------------------------
+        2500-GRAVACAO                      SECTION.                      
+       *-----------------------------------------------------------------
+            MOVE '2500-GRAVACAO'    TO    WK-AREA-COD
+	    MOVE  VALOR-TOTAL       TO    WK-VALOR-TOTAL                 
+            WRITE SAIDA                                                  
+                                                                         
+            IF  WK-FS-ARQSAI  NOT EQUAL '00'                             
+               DISPLAY 'ERRO NO: '        WK-AREA-COD                    
+               DISPLAY 'STATUS:  '        WK-FS-ARQSAI                   
+               MOVE  WK-FS-ARQSAI   TO    WK-AREA-STAT                   
+               MOVE 'ERRO AO GRAVAR NO ARQ. SAIDA'                       
+                                    TO    WK-AREA-MSG                    
+               CALL  WK-ABENDA      USING WK-AREA                        
+            END-IF.                                                      
+                                                                         
+            ADD  1                  TO    WK-CONT-GRAVADO.               
+                                                                         
+        2500-GRAVACAO-FIM.         EXIT.                                 
+       *-----------------------------------------------------------------
+        2750-CARREGA-TAB                   SECTION.                      
+       *-----------------------------------------------------------------
+	    MOVE 'N'                TO WK-FLAG-CPF.  
+                                                     
+            PERFORM VARYING WK-IND      FROM  1 BY 1 
+            UNTIL   WK-IND              GREATER 40   
+            OR      WK-TB-CPF11(WK-IND) EQUAL ZEROS  
+            OR      WK-FLAG-CPF         EQUAL 'Y'    
+                                                     
+               IF WK-TB-CPF11(WK-IND)   EQUAL CPF-E  
+                  MOVE 'Y'          TO    WK-FLAG-CPF
+                  PERFORM 2755-TABELA-DTVLR          
+               END-IF                                
+                                                     
+            END-PERFORM.                             
+                                                     
+            IF  WK-FLAG-CPF             EQUAL 'Y'    
+                GO TO 2750-CARREGA-TAB-EXIT          
+            END-IF. 
+		          IF  WK-TB-CPF11(WK-IND)     EQUAL ZEROS                      
+               MOVE CPF-E           TO    WK-TB-CPF11(WK-IND)            
+               ADD 1                TO    WK-CONT-CPF                    
+               PERFORM 2755-TABELA-DTVLR                                 
+            END-IF.                                                      
+       *                                                                 
+        2750-CARREGA-TAB-EXIT.     EXIT.                                 
+       *-----------------------------------------------------------------
+        2755-TABELA-DTVLR                  SECTION.                      
+       *-----------------------------------------------------------------
+            MOVE  'N'                TO   WK-FLAG-DTVLR                  
+                                                                         
+            PERFORM VARYING WK-IND2     FROM  1 BY 1                     
+            UNTIL   WK-IND2             GREATER 20                       
+            OR      WK-TB-DT(WK-IND,WK-IND2) EQUAL ZEROS                 
+            OR      WK-FLAG-DTVLR       EQUAL 'Y'                        
+                                                                         
+               IF WK-TB-DT(WK-IND,WK-IND2) EQUAL DATA-COMPRA-E                                            
+		  MOVE 'Y'           TO   WK-FLAG-DTVLR                  
+                  ADD  VALOR-GASTO   TO   WK-TB-VLR(WK-IND,WK-IND2)      
+               END-IF                                                    
+                                                                         
+            END-PERFORM.                                                 
+                                                                         
+            IF WK-FLAG-DTVLR            EQUAL 'Y'                        
+               GO TO 2755-TABELA-DTVLR-EXIT                              
+            END-IF.                                                      
+                                                                         
+            IF WK-TB-DT(WK-IND,WK-IND2) EQUAL ZEROS                      
+               MOVE DATA-COMPRA-E TO   WK-TB-DT(WK-IND,WK-IND2)          
+               MOVE VALOR-GASTO   TO   WK-TB-VLR(WK-IND,WK-IND2)         
+            END-IF.                                                      
+       *                                                                 
+        2755-TABELA-DTVLR-EXIT.    EXIT.                                 
+       *-----------------------------------------------------------------
+        3000-FS-GRAVADET                   SECTION. 
+       *-----------------------------------------------------------------
+            MOVE '3000-FS-GRAVACAO' TO    WK-AREA-COD                    
+            IF WK-FS-RELATO   NOT EQUAL '00'                             
+               DISPLAY 'ERRO NO: '        WK-AREA-COD                    
+               DISPLAY 'STATUS:  '        WK-FS-RELATO                   
+               MOVE  WK-FS-RELATO   TO    WK-AREA-STAT                   
+               MOVE 'ERRO AO GRAVAR NO ARQ. RELATO'                      
+                                    TO    WK-AREA-MSG                    
+               CALL  WK-ABENDA      USING WK-AREA                        
+            END-IF.                                                      
+                                                                         
+        3000-FS-GRAVADET-FIM.      EXIT.                                 
+       *-----------------------------------------------------------------
+        3500-GRAVA-DETALHE                 SECTION.                      
+       *-----------------------------------------------------------------
+            IF  WK-CONT-LINHA > 49                                       
+               PERFORM 1500-CABECALHO                                    
+            END-IF.
+       *                                                                 
+            MOVE  VALOR-GASTO       TO    DET-VALOR                      
+            WRITE REL-LINHA         FROM  DETALHE                        
+            PERFORM 3000-FS-GRAVADET                                     
+            ADD    1                TO    WK-TOT-REG.                    
+            ADD    1                TO    WK-CONT-LINHA.                 
+                                                                         
+        3500-GRAVA-DETALHE-FIM.    EXIT.                                 
+       *-----------------------------------------------------------------
+        3750-TOTALIZADOR                   SECTION.                      
+       *-----------------------------------------------------------------
+                                                                         
+            IF WK-CONT-LINHA > 47                                        
+               PERFORM 1500-CABECALHO                                    
+            END-IF.                                                      
+                                                                         
+            MOVE  WK-TOT-REG        TO    TOT1-VALOR-REG                 
+            MOVE  WK-TOT-SUM        TO    TOT2-VALOR-SUM
+                                                                                                                                                                                                                                                   
+		                                                                       
+            MOVE SPACES             TO    REL-LINHA                      
+            WRITE REL-LINHA                                              
+            PERFORM 3000-FS-GRAVADET                                     
+            WRITE REL-LINHA         FROM  TOT1                           
+            PERFORM 3000-FS-GRAVADET                                     
+            WRITE REL-LINHA         FROM  TOT2                           
+            PERFORM 3000-FS-GRAVADET.                                    
+                                                                         
+        3750-TOTALIZADOR-FIM.      EXIT.                                 
+       *-----------------------------------------------------------------
+        4000-DESCARREGA-TAB                SECTION.                      
+       *-----------------------------------------------------------------
+            PERFORM VARYING WK-IND       FROM  1 BY 1                    
+            UNTIL   WK-IND               GREATER 40                      
+            OR      WK-TB-CPF11(WK-IND)  EQUAL ZEROS                     
+                                                                         
+               MOVE WK-TB-CPF11(WK-IND) TO  WK-CPF
+	       PERFORM 4050-TOTCLI                                       
+               ADD 1                    TO  WK-CONT-LINHA                
+               PERFORM 4100-DESCARREGA-DTVLR                             
+               WRITE REL-LINHA                                           
+               PERFORM 3000-FS-GRAVADET                                  
+               ADD 1                    TO  WK-CONT-LINHA                
+                                                                         
+            END-PERFORM.                                                 
+       *                                                                 
+        4000-DESCARREGA-TAB-EXIT.  EXIT.                                 
+       *-----------------------------------------------------------------
+        4050-TOTCLI                        SECTION.                      
+       *-----------------------------------------------------------------
+            MOVE WK-CPF(1:9)        TO    TOTCLICP9                      
+            MOVE WK-CPF(10:2)       TO    TOTCLICP2                      
+                                                                         
+            IF WK-CONT-LINHA > 49                                        
+               PERFORM 1500-CABECALHO  
+	    END-IF.                                                      
+                                                                         
+            WRITE REL-LINHA         FROM    TOTCLI                       
+            PERFORM 3000-FS-GRAVADET.                                    
+                                                                         
+        4050-TOTCLI-EXIT.          EXIT.                                 
+       *-----------------------------------------------------------------
+        4100-DESCARREGA-DTVLR              SECTION.                      
+       *-----------------------------------------------------------------
+            PERFORM VARYING WK-IND2      FROM  1 BY 1                    
+            UNTIL   WK-IND2              GREATER 20                      
+            OR      WK-TB-DT(WK-IND,WK-IND2) EQUAL ZEROS                 
+                                                                         
+               MOVE WK-TB-DT(WK-IND,WK-IND2)  TO  WK-DATA                
+               MOVE WK-TB-VLR(WK-IND,WK-IND2) TO  TOTVLR                 
+               PERFORM 4150-TOTDATA                                      
+               ADD 1                TO WK-CONT-LINHA 
+	    END-PERFORM.                                                 
+       *                                                                 
+        4100-DESCARREGA-DTVLR-EXIT.  EXIT.                               
+       *-----------------------------------------------------------------
+        4150-TOTDATA                       SECTION.                      
+       *-----------------------------------------------------------------
+            MOVE WK-DATA(1:2)       TO    TOTDIA                         
+            MOVE WK-DATA(3:2)       TO    TOTMES                         
+            MOVE WK-DATA(5:4)       TO    TOTANO                         
+                                                                         
+            IF WK-CONT-LINHA > 49                                        
+               PERFORM 1500-CABECALHO                                    
+            END-IF.                                                      
+                                                                         
+            WRITE REL-LINHA         FROM    TOTDATA.                     
+            PERFORM 3000-FS-GRAVADET.                                    
+       *                                                                 
+        4150-TOTDATA-EXIT.         EXIT.
+       *-----------------------------------------------------------------
+        9000-TERMINO                       SECTION.                      
+       *-----------------------------------------------------------------
+            MOVE '9000-TERMINO'     TO    WK-AREA-COD                    
+            WRITE REL-LINHA                                              
+            ADD 1                   TO    WK-CONT-LINHA                  
+            IF  WK-CONT-LEITURA    >=   1                                
+               PERFORM 2500-GRAVACAO                                     
+               ADD  1               TO    WK-CONT-QUEBRA                 
+               PERFORM 4000-DESCARREGA-TAB                               
+            END-IF.                                                      
+                                                                         
+            PERFORM 3750-TOTALIZADOR.                                    
+                                                                         
+            CLOSE         ARQENT.                                        
+            IF WK-FS-ARQENT   NOT EQUAL '00'                             
+               DISPLAY 'ERRO NO: '        WK-AREA-COD                    
+               DISPLAY 'STATUS:  '        WK-FS-ARQENT
+	       MOVE  WK-FS-ARQENT   TO    WK-AREA-STAT 
+               MOVE 'ERRO AO FECHAR ARQUIVO ENTRADA'   
+                                    TO    WK-AREA-MSG  
+               CALL  WK-ABENDA      USING WK-AREA      
+            END-IF.                                    
+       *                                               
+            CLOSE         ARQSAI.                      
+            IF WK-FS-ARQSAI   NOT EQUAL '00'           
+               DISPLAY 'ERRO NO: '        WK-AREA-COD  
+               DISPLAY 'STATUS:  '        WK-FS-ARQSAI 
+               MOVE  WK-FS-ARQSAI   TO    WK-AREA-STAT 
+               MOVE 'ERRO AO FECHAR ARQUIVO SAIDA'     
+                                    TO    WK-AREA-MSG  
+               CALL  WK-ABENDA      USING WK-AREA      
+            END-IF.                                    
+       *                                               
+            CLOSE         RELATO.                      
+            IF WK-FS-RELATO   NOT EQUAL '00'
+	       DISPLAY 'ERRO NO: '        WK-AREA-COD               
+               DISPLAY 'STATUS:  '        WK-FS-RELATO              
+               MOVE  WK-FS-RELATO   TO    WK-AREA-STAT              
+               MOVE 'ERRO AO FECHAR RELATORIO'                      
+                                    TO    WK-AREA-MSG               
+               CALL  WK-ABENDA      USING WK-AREA                   
+            END-IF.                                                 
+       *                                                            
+            DISPLAY 'QTD DE LEITURAS: ' WK-CONT-LEITURA '          '
+            DISPLAY 'QTD DE CPF     : ' WK-CONT-CPF     '          '
+            DISPLAY 'QTD DE GRAVADOS: ' WK-CONT-GRAVADO '          '
+            DISPLAY 'QTD DE QUEBRAS : ' WK-CONT-QUEBRA  '          '
+            DISPLAY 'QTD DE PAGINAS : ' WK-CONT-PAG     '          '
+            DISPLAY 'QTD DE REGISTRO: ' WK-TOT-REG      '          '
+            DISPLAY 'VLR DA SOMA    : ' WK-TOT-SUM      '          '
+            DISPLAY '                                              '
+            DISPLAY '**********************************************'
+            DISPLAY '**********PGM EXECUTADO COM SUCESSO.**********'
+            DISPLAY '**********************************************'.    
+                                                                         
+        9000-TERMINO-FIM.          EXIT.                                 
+       *-----------------------------------------------------------------                                                                                   
+                                                                                                                                                                    
+                                                                                                                                                                        
