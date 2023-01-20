@@ -1,0 +1,34 @@
+fila - infotec
+GERAARQ - Gerar arquivo para execução
+GERAVSM2 - Gerar arquivo vsam para execução
+
+
+VRBQHHTL    -   JCLBD2MV  - Telefone            - DC.VR.DG.VRBQHHTL.*
+VRB631S     -   JCL631S   - Quebra              - DC.VR.DG.VRB631S.*
+VRB632S     -   JCLBD2MV  - Fibonacci           - DC.VR.DG.VRB632S.*
+VRB637S     -   JCL637S   - Quebra + Relatório  - DC.VR.DG.VRB637S.*
+VRB638S     -   JCL638S   - '' + Abend          - DC.VR.DG.VRB638S.*
+VRB640S     -   JCL640S   - '' & Tab            - DC.VR.DG.VRB640S.*
+VRB642S     -   JCL642S   - '' & BiTab          - DC.VR.DG.VRB642S.*
+VRB644S     -   JCL644S   - Evaluate - Display  - DC.VR.DG.VRB644S.*
+VRB646S     -   JCL646S   - Balance-Line(1:1)   - DC.VR.DG.VRB646S.*
+VRB648S     -   JCL648S   - Balance-Line(1:N)   - DC.VR.DG.VRB648S.*
+VRB663S     -   JCL663S   - Arq VSAM            - DC.VR.DG.VRB663S.*
+VRB668S     -   JCL668S   - REWRITE Arq VSAM    - DC.VR.DG.VRB668S.*
+VRB672S     -   JCL672S   - (RE)WRITE VSAM      - DC.VR.DG.VRB672S.*
+VRB677S     -   JCL677S   - Compara VSAM        - DC.VR.DG.VRB677S.*
+VRB684S     -   JCL684S   - Delete  VSAM        - DC.VR.DG.VRB684S.*
+VRB686S     -   JCL686S   - Parm no JCL + VSAM  - DC.VR.DG.VRB686S.*
+VRB691S     -   JCL691S   - Valida CPF - CALL   - DC.VR.DG.VRB691S.*
+VRB696S     -   JCL696S   - Chama VRB691S       - DC.VR.DG.VRB696S.*
+VRB732S     -   JCL732S   - Rel com VSAM e Inp  - DC.VR.DG.VRB732S.*
+EASYV01     -             - 1º com Easytrieve   - DC.VR.DG.EASYV01.*
+
+
+
+CB2BNN
+'PP.AR.VK.AMBS.S1'
+JCLBD2MV
+
+
+
