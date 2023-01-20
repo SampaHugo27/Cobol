@@ -1,0 +1,100 @@
+Ambientes CICS -> Ambiente que a gente desenvolve programas ontime.
+24 linhas x 80 colunas
+
+Iremos trabalhar com os 4 abaixo:
+
+
+PREPROD -> Homologação 
+
+CRED -> Produção
+
+DESF -> Ambiente de Desenvolvimento CICS
+
+Digitar uma transação que irá direcionar ao menu tela referente ao prog-mapa.
+
+Transação: Código de 1 a 4 caracteres que está associado a um pgm.
+
+
+S TRAN(VL01) Comando que busca infos sobre a transação.
+
+
+EIBCPOSN = Posição do Cursor
+EIBAID = X'7D' Enter
+ESC = Fim de Transação
+
+
+
+ARQB
+
+ Transação associada a um programa
+
+
+Para criar um pgm: Criar uma transação em PCT e dps criar um programa em PPT
+via cadastro.
+
+
+Ambiente TSO - Endevor
+
+Element ==> VL001T1
+TYPE ==> MAPA
+
+VR296T1
+
+====================================================================
+Ambiente DESF
+
+Comando CEDA <ENTER> Incluir o cadastro do programa, mapa, arquivo na BCT
+
+DEF ou DEFINE <ENTER> MA
+
+Mapset VR296T1
+Group GRVR
+Description TESTE MAPA <ENTER>
+
+
+CEDA I -> Digitar MAPSET VR296T1 e GROUP GRVR -> INCLUSÃO DO MAPA
+
+<tecla ESC> Limpa Tela
+
+
+CEDA DEF TRANS (VRHG) GR(GRVR) -> INCLUSÃO DA TRANSAÇÃO CORRESPONDENTE
+
+VRO296S => ONLINE
+
+CEDA I PROG (VRO296S) GR(GRVR) -> INCLUSÃO DO PROGRAMA 
+
+
+
+Comando CECI <ENTER> SEN map (VR296T1) => Executa comandos  CICS quaisquer
+
+CECI XCTL (VRO001S)
+
+ATTRIB=UNPROT,MDT
+
+
+
+
+Comando CEMT  S PROG (VR296T1) -> COMO FOI CADASTRADO SEU MAPA, PROG, CONSULTA E ATUALIZA
+
+
+    NEW -> BUSCA A ULTIMA VERSAO DO MAPA ou PROGRAMA se for o caso
+
+
+    ? Program
+
+VRO296S => ONLINE
+
+CEDA I PROG (VRO296S) GR(GRVR) 
+
+VRHG -> MINHA TRANSAÇÃO
+
+CEDA DEF TRANS (VRHG) GR(GRVR) 
+
+==============================================================
+
+CEDF => Debuga a transação (COMANDO CICS)
+
+CESF LOGOFF => Sai do CICS
+
+
+EIBCPOSN => Posição da coluna na tela
