@@ -69,4 +69,6 @@
             DISPLAY WS-CAMPOA.                                      
             DISPLAY WS-CAMPOB.                                      
             DISPLAY WS-CAMPOC. 
-            STOP RUN.                                                                                                                                                        
+            STOP RUN.             
+      
+      
