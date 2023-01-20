@@ -138,4 +138,6 @@
                DISPLAY WS-VAR                                  
             END-PERFORM. 
                                            
-            STOP RUN.                                                                                                                                                                      
+            STOP RUN.        
+      
+      
