@@ -318,7 +318,7 @@
               DISPLAY 'ERRO NO: '                WK-CODIGO-AREA        
               DISPLAY 'STATUS:  '                WK-FS-RELATO           
               MOVE WK-FS-RELATO       TO         WK-AREA-STAT           
-              MOVE 'ERRO DA GRAVA«√O NO ARQUIVO DE SAIDA RELATO'        
+              MOVE 'ERRO DA GRAVA√á√ÉO NO ARQUIVO DE SAIDA RELATO'        
                                       TO         WK-AREA-MSG            
               CALL WK-ABENDA          USING      WK-AREA                
            END-IF.                                                      
@@ -564,6 +564,4 @@
       *                                                               * 
       *---------------------------------------------------------------* 
        3900-99-FIM.                              EXIT.                  
-      *---------------------------------------------------------------* 
-
-                                                                     
+      *---------------------------------------------------------------*                                                              
